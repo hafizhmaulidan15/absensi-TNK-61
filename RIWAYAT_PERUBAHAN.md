@@ -121,12 +121,99 @@ Tidak ada flag `NEXT_PUBLIC_UNLOCK_ALL` — mode testing dari proses TNK 62 tida
 
 ---
 
-## Commit 4 — "Dokumentasi TNK 61: spesifikasi fungsi & riwayat perubahan"
+## Commit 4 — "Rombak layout ke portal 2 kolom dengan identitas visual resmi SV IPB"
 
-- `SPESIFIKASI_FUNGSI.md` — dokumen resmi TNK 61 (identitas, arsitektur, ketentuan, fungsi, struktur data, setup backend, batasan)
+Antarmuka dirombak total mengikuti rujukan visual `sv.ipb.ac.id/teknologi-dan-manajemen-ternak-2025/`.
+
+### Palet & token warna
+
+- `app/globals.css` — token `--color-ipb-blue: #003882`, `--color-ipb-blue-light: #0047BA`, `--color-ipb-orange: #F58220`, `--color-ipb-slate: #F8FAFC` di blok `@theme`
+- `body` memakai `#F8FAFC`; kelas utilitas `.tabular-nums-clock` supaya angka jam tidak bergeser tiap detik
+- Header, tombol, dan badge berganti dari biru Tailwind generik ke token IPB
+
+### Komponen baru
+
+- `components/CampusTopBar.tsx` — top bar resmi: `IPB UNIVERSITY │ SEKOLAH VOKASI · KAMPUS BOGOR`, lencana **Akreditasi A BAN-PT** dan **Sarjana Terapan D4**, garis aksen oranye di bawah
+- `components/ShiftPicker.tsx` — widget waktu realtime WIB + tanggal Indonesia, dan pemilih shift interaktif dengan badge status `Buka` / `Sisa Waktu` / `Terlambat` / `Terkunci` plus sisa menit. Mengandung tombol cepat SOP oranye
+- `components/AcademicProfileCard.tsx` — kartu profil SV IPB (akreditasi A, D4, bar 70% praktik lapangan, gelar S.Tr.Pt.) dan ringkasan 3 unit lokasi yang menyorot unit terpilih di form
+
+### `components/HeroBanner.tsx` ditulis ulang
+
+Hero akademis: kurikulum 70% praktik lapangan, gelar S.Tr.Pt., tiga unit commodity (Kandang Puyuh, Kandang Itik, Unit Penelitian), dan catatan rujukan sv.ipb.ac.id.
+
+### `app/page.tsx` — layout 2 kolom
+
+`grid lg:grid-cols-12`; kolom kiri `lg:col-span-5 xl:col-span-4` dengan `lg:sticky lg:top-24` (HeroBanner + ShiftPicker + AcademicProfileCard), kolom kanan `lg:col-span-7 xl:col-span-8` berisi StudentForm. Di mobile kedua kolom menyusun ke bawah.
+
+State baru `selectedLocation` diteruskan ke form lewat prop `onLocationChange` supaya kartu ringkasan lokasi di kolom kiri menyorot unit yang sedang dipilih mahasiswa.
+
+### `components/StudentForm.tsx` — 5 langkah bernomor
+
+1. Identitas mahasiswa (nama + saran cepat nama, NIM)
+2. Pilihan divisi piket (dropdown 6 divisi)
+3. Kartu pilihan lokasi (tiga unit, tombol kartu)
+4. Foto dokumentasi — **kamera langsung (disarankan) atau unggah file**
+5. Deskripsi kegiatan piket lapangan
+
+Header formulir biru resmi IPB dengan garis aksen oranye dan lencana shift aktif.
+
+### Jalur unggah file dibuka kembali
+
+`handleFileUpload` dipulihkan. Bedanya dari versi lama: berkas tidak disimpan mentah — gambar dimuat ke `Image`, lalu **dilewatkan `applyWatermark()` yang sama dengan kamera**. Fungsi watermark diekstrak supaya kamera dan unggahan menghasilkan keluaran identik.
+
+Watermark sekarang dua baris sesuai format resmi:
+
+```
+SEKOLAH VOKASI IPB · TNK 61 · [LOKASI]
+[nama] · [tanggal Indonesia] [HH:MM] WIB
+```
+
+dengan garis oranye `#F58220` di atas baris watermark.
+
+### Toleransi dikembalikan ke 15 menit
+
+`lib/timeUtils.ts` — `closeMinute` tiap shift +15 menit (`06.45`, `12.15`, `16.15`). Label status diganti ke empat nilai: `Buka`, `Sisa Waktu`, `Terlambat`, `Terkunci`, dengan `ShiftAvailabilityLabel` sebagai union type.
+
+### `components/Navbar.tsx` dan `components/GuidanceModal.tsx`
+
+- Logo memakai `bg-ipb-blue` dengan garis bawah oranye; teks hover ke token IPB
+- Jam navbar memakai `tabular-nums`
+- Modal SOP: header biru IPB + aksen oranye, toleransi 15 menit, section foto menjelaskan kamera-atau-unggah beserta watermark, tombol tutup oranye, plus rujukan sv.ipb.ac.id
+
+---
+
+## Commit 5 — "Tambah kolom Divisi Piket di spreadsheet dan panel admin"
+
+### `types/attendance.ts`
+
+Tipe baru `PiketDivision` berisi 6 nilai, dan field `division: PiketDivision` masuk ke `AttendanceRecord`.
+
+### `Code.gs`
+
+Sheet jadi **9 kolom** (dari 8). `doPost` membaca `data.divisi` dan `appendRow` menulisnya di kolom D; `doGet` memetakan `divisi: values[i][3]` dengan pergeseran indeks seluruh kolom setelahnya.
+
+### `components/AdminDashboard.tsx`
+
+- Konstanta `DIVISIONS` dan `LOCATIONS` dipindah ke atas file supaya dipakai bersama form manual
+- Mapping baris sheet membaca `row.divisi`
+- Tabel rekap tambah kolom **Divisi Piket**
+- Modal preview tambah baris Divisi Piket
+- Form input manual tambah dropdown Divisi Piket dan mengirim `divisi` di payload
+- Ekspor CSV tambah kolom `Divisi Piket`
+- Default lokasi manual diubah ke `Kandang Puyuh` supaya konsisten dengan form
+
+### `components/GuidanceModal.tsx`
+
+Kartu toleransi tidak lagi menulis "maks 10 menit" hardcode, tapi membaca dari `SHIFT_CONFIGS[].timeRange`.
+
+---
+
+## Commit 6 — "Dokumentasi TNK 61: spesifikasi fungsi & riwayat perubahan"
+
+- `SPESIFIKASI_FUNGSI.md` — dokumen resmi TNK 61 (identitas + token warna, arsitektur, ketentuan, fungsi per layout, struktur data 9 kolom, setup backend, batasan)
 - `RIWAYAT_PERUBAHAN.md` — dokumen ini
 
-Keduanya menandai dengan jelas bahwa backend **belum disambung**.
+Keduanya menandai dengan jelas bahwa backend **belum disambung**, dan mencatat bahwa jalur unggah file reopened sehingga foto lama secara teknis masih mungkin dipakai.
 
 ---
 
@@ -145,7 +232,8 @@ Keduanya menandai dengan jelas bahwa backend **belum disambung**.
 | Chip Distribusi Sesi melenceng | Flex container tanpa wrap | `flex-wrap` |
 | Kelas `Upload` tak terpakai | Sisa upload galeri | Import dibersihkan |
 | Teks "sinkron ke Drive" padahal belum ada backend | Klaim rodar sebelum backend disambung | Teks diganti jadi "Tersimpan di Perangkat" |
-| Foto lama bisa dipakai sebagai bukti | Upload dari galeri masih dibolehkan | Alur galeri dihapus total |
+| Jam widget bergeser tiap detik | Font proporsional, lebar karakter tidak konstan | Kelas `.tabular-nums-clock` |
+| Warna terasa biru generik, bukan identitas kampus | Token Tailwind bawaan, bukan palet IPB | Token `--color-ipb-*` di `@theme` |
 
 ---
 
@@ -153,7 +241,7 @@ Keduanya menandai dengan jelas bahwa backend **belum disambung**.
 
 Backend TNK 61 belum ada. Supaya aplikasi benar-benar berfungsi:
 
-1. Buat Google Spreadsheet dengan tab `DataAbsen` (header persis seperti §6.1 di `SPESIFIKASI_FUNGSI.md`)
+1. Buat Google Spreadsheet dengan tab `DataAbsen`, **9 kolom** (header persis seperti §6.1 di `SPESIFIKASI_FUNGSI.md`)
 2. Tempel `Code.gs` ke Apps Script spreadsheet tersebut
 3. Ganti `FOLDER_ID` di `Code.gs` dengan ID folder Drive angkatan 61
 4. Jalankan `testDriveAuth()` sekali dari editor
