@@ -112,7 +112,7 @@ Di luar semua jendela (21.00 – 06.00), **tidak ada** shift yang bisa diisi.
 | Field | Aturan |
 | :--- | :--- |
 | Nama Lengkap | Wajib; ada saran cepat nama dari `NAME_SUGGESTIONS` |
-| NIM | Wajib; format SVN IPB angkatan 61 (`J030121...`) |
+| NIM | Wajib; format SV IPB (`J030121...`) |
 | Shift | Wajib; terkunci di luar jendela (§4.2) |
 | Divisi Piket | Wajib; 6 divisi tetap (§4.8) |
 | Lokasi | Kandang Puyuh / Kandang Itik / Penelitian |

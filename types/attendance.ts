@@ -7,13 +7,8 @@ export type UnitLocation =
   | 'Kandang Itik'
   | 'Penelitian';
 
-export type PiketDivision =
-  | 'Divisi Unggas (Puyuh & Itik)'
-  | 'Divisi Pakan & Nutrisi Ternak'
-  | 'Divisi Kesehatan & Biosekuriti'
-  | 'Divisi Penelitian & Data Lapangan'
-  | 'Divisi Sanitasi & Kebersihan'
-  | 'Divisi Sarana & Prasarana';
+// Divisi piket sengaja TIDAK punya union type: mahasiswa mengetiknya bebas
+// sebagai teks, supaya divisi baru bisa muncul tanpa mengubah kode.
 
 export interface AttendanceRecord {
   id: string;
@@ -22,7 +17,7 @@ export interface AttendanceRecord {
   formattedTime: string; // "06:42:15 WIB"
   studentName: string;
   studentNim: string;
-  division: PiketDivision; // Divisi piket yang dipilih
+  division: string; // Divisi piket, diisi bebas oleh mahasiswa
   shift: PiketShift;
   location: UnitLocation;
   photoUrl: string; // Data URL or Drive link

@@ -2,14 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { CampusTopBar } from '@/components/CampusTopBar';
 import { HeroBanner } from '@/components/HeroBanner';
 import { ShiftPicker } from '@/components/ShiftPicker';
-import { AcademicProfileCard } from '@/components/AcademicProfileCard';
 import { StudentForm } from '@/components/StudentForm';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import { GuidanceModal } from '@/components/GuidanceModal';
-import { AttendanceRecord, PiketShift, UnitLocation } from '@/types/attendance';
+import { AttendanceRecord, PiketShift } from '@/types/attendance';
 import { INITIAL_RECORDS } from '@/lib/sampleData';
 import { getWIBTimeParts } from '@/lib/timeUtils';
 
@@ -31,8 +29,6 @@ export default function Home() {
   const [currentTab, setCurrentTab] = useState<'student' | 'admin'>('student');
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [selectedShift, setSelectedShift] = useState<PiketShift>('06.30');
-  // Disinkronkan dari form supaya kartu ringkasan lokasi di kolom kiri menyorot unit terpilih
-  const [selectedLocation, setSelectedLocation] = useState<UnitLocation>('Kandang Puyuh');
 
   // Persistence
   const [records, setRecords] = useState<AttendanceRecord[]>(INITIAL_RECORDS);
@@ -146,9 +142,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-ipb-slate text-slate-900 font-sans selection:bg-ipb-blue selection:text-white pb-10">
-      {/* Top Bar resmi kampus */}
-      <CampusTopBar />
-
       {/* Navigation */}
       <Navbar
         currentTime={currentTime}
@@ -174,8 +167,6 @@ export default function Home() {
                   onSelectShift={setSelectedShift}
                   onOpenGuidance={() => setIsGuidanceOpen(true)}
                 />
-
-                <AcademicProfileCard selectedLocation={selectedLocation} />
               </div>
 
               <div className="lg:col-span-7 xl:col-span-8">
@@ -185,7 +176,6 @@ export default function Home() {
                   onAttendanceSubmitted={handleAttendanceSubmitted}
                   gasWebhookUrl={gasWebhookUrl}
                   onOpenGuidance={() => setIsGuidanceOpen(true)}
-                  onLocationChange={setSelectedLocation}
                 />
               </div>
             </div>
@@ -199,12 +189,14 @@ export default function Home() {
                   window.location.hash = '';
                   setCurrentTab('student');
                 }}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer"
+                className="text-xs font-semibold text-ipb-orange hover:text-orange-400 flex items-center gap-1 cursor-pointer"
               >
                 <span>&larr;</span>
                 <span>Kembali ke Form Presensi Mahasiswa</span>
               </button>
-              <span className="text-xs text-slate-400 font-mono">Panel Khusus Pengawas/Admin (#admin)</span>
+              <span className="text-[10px] text-slate-400 font-mono">
+                admin_panel &middot; #admin
+              </span>
             </div>
             <AdminDashboard
               records={records}

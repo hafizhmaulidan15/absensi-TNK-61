@@ -5,7 +5,6 @@ import {
   AttendanceRecord,
   PiketShift,
   UnitLocation,
-  PiketDivision,
 } from '@/types/attendance';
 import { formatWIBDate, formatWIBTime } from '@/lib/timeUtils';
 import {
@@ -28,16 +27,61 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
-const DIVISIONS: PiketDivision[] = [
-  'Divisi Unggas (Puyuh & Itik)',
-  'Divisi Pakan & Nutrisi Ternak',
-  'Divisi Kesehatan & Biosekuriti',
-  'Divisi Penelitian & Data Lapangan',
-  'Divisi Sanitasi & Kebersihan',
-  'Divisi Sarana & Prasarana',
-];
-
 const LOCATIONS: UnitLocation[] = ['Kandang Puyuh', 'Kandang Itik', 'Penelitian'];
+
+/** Kartu sebaran (bar proporsional) */
+const BreakdownCard: React.FC<{
+  title: string;
+  items: Array<{ label: string; value: number; bar: string }>;
+}> = ({ title, items }) => {
+  const max = Math.max(...items.map((i) => i.value), 1);
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <div className="text-[10px] font-mono uppercase tracking-wider text-slate-400 mb-3">
+        {title}
+      </div>
+      <div className="space-y-2.5">
+        {items.map((item) => (
+          <div key={item.label}>
+            <div className="flex items-baseline justify-between gap-2 mb-1">
+              <span className="text-[11px] text-slate-300 truncate">{item.label}</span>
+              <span className="text-[11px] font-mono font-bold text-white tabular-nums shrink-0">
+                {item.value}
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${item.bar} transition-all`}
+                style={{ width: `${Math.round((item.value / max) * 100)}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/** Kartu KPI console gelap */
+const KpiCard: React.FC<{
+  label: string;
+  value: string;
+  hint: string;
+  icon: React.ReactNode;
+  accent: string;
+  valueClass: string;
+}> = ({ label, value, hint, icon, accent, valueClass }) => (
+  <div className={`bg-slate-900 border border-slate-800 border-l-4 ${accent} rounded-xl p-4`}>
+    <div className="flex items-center justify-between text-slate-400 text-[10px] font-semibold uppercase tracking-wider font-mono">
+      <span className="truncate">{label}</span>
+      {icon}
+    </div>
+    <div className={`mt-2 text-2xl sm:text-3xl font-bold font-mono tabular-nums ${valueClass}`}>
+      {value}
+    </div>
+    <div className="mt-1 text-slate-500 text-[11px]">{hint}</div>
+  </div>
+);
 
 interface AdminDashboardProps {
   records: AttendanceRecord[];
@@ -100,7 +144,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             formattedTime: `${row.waktu || ''} WIB`,
             studentName: row.nama || '',
             studentNim: row.nim || '',
-            division: (row.divisi || DIVISIONS[0]) as PiketDivision,
+            division: row.divisi || '',
             shift: (row.shift || '06.30') as PiketShift,
             location: (row.lokasi || 'Kandang Puyuh') as UnitLocation,
             photoUrl: row.urlFoto || '',
@@ -138,14 +182,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [shiftFilter, setShiftFilter] = useState<'all' | PiketShift>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Tepat Waktu' | 'Toleransi' | 'Terlambat'>('all');
 
-  // Preview Modal state
+// Preview Modal state
   const [previewRecord, setPreviewRecord] = useState<AttendanceRecord | null>(null);
+
+  // Navigasi panel: layout memakai sidebar, bukan menumpuk semua di satu kolom
+  const [view, setView] = useState<'ringkasan' | 'data'>('ringkasan');
 
   // Add Manual Record Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [manualName, setManualName] = useState('');
 const [manualNim, setManualNim] = useState('');
-  const [manualDivision, setManualDivision] = useState<PiketDivision>(DIVISIONS[0]);
+  const [manualDivision, setManualDivision] = useState('');
   const [manualShift, setManualShift] = useState<PiketShift>('06.30');
   const [manualLocation, setManualLocation] = useState<UnitLocation>('Kandang Puyuh');
   const [manualNotes, setManualNotes] = useState('');
@@ -372,207 +419,291 @@ const csvContent =
     reader.readAsDataURL(file);
   };
 
-  // IF NOT AUTHENTICATED: Show Password Login Screen
+// IF NOT AUTHENTICATED: Show Password Login Screen
+  // Panel admin memakai visual "console" gelap, sengaja berbeda dari portal
+  // mahasiswa yang terang — supaya saat Intent galat, layar ini tidak tertukar
+  // dengan form presensi.
   if (!isAuthenticated) {
     return (
       <div className="max-w-md mx-auto my-12 px-4">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-xl overflow-hidden">
-          
-          <div className="bg-blue-800 p-6 text-white text-center">
-            <div className="w-14 h-14 rounded-2xl bg-orange-500/90 text-white flex items-center justify-center mx-auto mb-3 shadow-lg">
-              <Lock className="w-7 h-7" />
+        <div className="bg-slate-900 rounded-2xl border border-slate-700 overflow-hidden shadow-2xl shadow-slate-900/30">
+          <div className="px-6 py-6 text-center border-b border-slate-800">
+            <div className="w-14 h-14 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center mx-auto mb-3">
+              <Lock className="w-6 h-6 text-ipb-orange" />
             </div>
-            <h2 className="text-xl font-bold tracking-tight">Autentikasi Panel Admin</h2>
-            <p className="text-xs text-blue-100 mt-1">
-              Portal Khusus Dosen &amp; Koordinator Piket TNK 61 IPB
+            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-ipb-orange mb-1.5">
+              Restricted Access
+            </div>
+            <h2 className="text-lg font-mono font-bold tracking-tight text-white">
+              panel_admin
+            </h2>
+            <p className="text-[11px] text-slate-400 mt-2 font-mono">
+              Dosen &amp; Koordinator Piket &middot; TNK 61
             </p>
           </div>
 
-          <form onSubmit={handlePasswordSubmit} className="p-6 sm:p-8 space-y-4">
+          <form onSubmit={handlePasswordSubmit} className="p-6 space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Masukkan Password Admin
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5 font-mono">
+                password
               </label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoFocus
+                  autoComplete="current-password"
                   value={passwordInput}
                   onChange={(e) => {
                     setPasswordInput(e.target.value);
                     setPasswordError(false);
                   }}
-                  placeholder="Password Admin..."
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 text-sm tracking-wider font-mono focus:outline-hidden focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900"
+                  placeholder="••••••••"
+                  className="w-full px-3 py-3 pr-20 rounded-lg bg-slate-800 border border-slate-700 text-sm tracking-widest font-mono text-white placeholder:text-slate-600 focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-xs font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1.5 rounded text-[10px] font-mono font-bold uppercase text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer"
                 >
-                  {showPassword ? 'Sembunyikan' : 'Tampilkan'}
+                  {showPassword ? 'sembunyi' : 'lihat'}
                 </button>
               </div>
 
               {passwordError && (
-                <div className="mt-2 text-xs text-rose-600 flex items-center gap-1 font-medium">
+                <div className="mt-2 text-[11px] text-rose-400 flex items-center gap-1 font-mono">
                   <AlertCircle className="w-3.5 h-3.5" />
-                  <span>Password salah. Silakan periksa kembali.</span>
+                  <span>access_denied &mdash; password salah</span>
                 </div>
               )}
             </div>
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm transition-colors shadow-sm cursor-pointer min-h-[44px]"
+              className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-ipb-orange hover:bg-orange-600 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer min-h-[46px]"
             >
               <Unlock className="w-4 h-4" />
-              <span>Masuk ke Panel Admin</span>
+              <span>Unlock Panel</span>
             </button>
-          </form>
 
+            <p className="text-[10px] text-slate-600 text-center font-mono leading-relaxed">
+              Pin dicek di sisi klien. Siapa pun yang Inspect Element bisa
+              membacanya dari bundle JS.
+            </p>
+          </form>
         </div>
       </div>
     );
   }
 
-  // AUTHENTICATED: Display Full Dashboard
+// AUTHENTICATED: sidebar kiri (kontrol + navigasi) + area konten kanan
   return (
-    <div className="max-w-7xl mx-auto my-8 px-4 sm:px-6 lg:px-8 space-y-6">
-      
-      {/* Top Header & Actions Bar */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-800">
-              Panel Pengawas & Rekapitulasi
-            </span>
-            <span className="text-slate-400">·</span>
-            <span className="text-xs font-medium text-slate-500">
-              Teknologi dan Manajemen Ternak SV IPB Angkatan 61
-            </span>
+    <div className="max-w-7xl mx-auto my-6 px-3 sm:px-5">
+      <div className="lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
+        {/* ============ SIDEBAR ============ */}
+        <aside className="lg:col-span-3 xl:col-span-2 lg:sticky lg:top-24 space-y-4 mb-5 lg:mb-0">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+            <div className="h-1 bg-ipb-orange" />
+            <div className="p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-ipb-orange">
+                  admin_panel
+                </span>
+              </div>
+              <h2 className="text-base font-bold text-white font-mono leading-tight break-all">
+                rekap_presensi
+              </h2>
+              <p className="text-[10px] text-slate-500 font-mono mt-1">
+                TNK 61 &middot; SV IPB
+              </p>
+            </div>
           </div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-1">
-            Dashboard Rekap Presensi Piket
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Monitoring data kehadiran real-time dan verifikasi foto dokumentasi kandang mahasiswa
-          </p>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>Tambah Data Manual</span>
-          </button>
+          {/* Navigasi */}
+          <nav className="bg-slate-900 rounded-2xl border border-slate-800 p-1.5 space-y-1">
+            {(
+              [
+                { key: 'ringkasan' as const, label: 'Ringkasan', icon: <ShieldCheck className="w-4 h-4" /> },
+                { key: 'data' as const, label: 'Data Presensi', icon: <Calendar className="w-4 h-4" /> },
+              ]
+            ).map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => setView(item.key)}
+                aria-current={view === item.key}
+                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer min-h-[42px] ${
+                  view === item.key
+                    ? 'bg-ipb-blue text-white'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                {item.icon}
+                <span className="truncate">{item.label}</span>
+              </button>
+            ))}
+          </nav>
 
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors shadow-2xs"
-          >
-            <Download className="w-4 h-4" />
-            <span>Ekspor CSV</span>
-          </button>
+          {/* Aksi */}
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-2 space-y-1.5">
+            <button
+              type="button"
+              onClick={() => setShowAddModal(true)}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-ipb-orange hover:bg-orange-600 text-white text-xs font-bold transition-colors min-h-[42px] cursor-pointer"
+            >
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              <span>Input Manual</span>
+            </button>
 
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-slate-700 hover:border-slate-500 hover:bg-slate-800 text-slate-200 text-xs font-semibold transition-colors min-h-[42px] cursor-pointer font-mono"
+            >
+              <Download className="w-4 h-4 shrink-0" />
+              <span>export.csv</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setIsAuthenticated(false)}
-            className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-            title="Kunci Panel / Keluar"
-          >
-            <Lock className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
+            <button
+              type="button"
+              onClick={() => setIsAuthenticated(false)}
+              className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-slate-800 text-slate-500 hover:text-rose-400 hover:border-rose-500/40 hover:bg-rose-500/10 text-xs font-semibold transition-colors min-h-[42px] cursor-pointer font-mono"
+            >
+              <Lock className="w-4 h-4 shrink-0" />
+              <span>lock_panel</span>
+            </button>
+          </div>
 
-      {/* Summary KPI Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Metric 1 */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>Total Presensi Tercatat</span>
-            <CheckCircle className="w-4 h-4 text-blue-600" />
+          {/* Ringkasan angka ringkas di sidebar */}
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 space-y-2.5">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500">
+              ringkasan cepat
+            </div>
+            {[
+              { label: 'Total', value: stats.total },
+              { label: 'Hari ini', value: stats.todayCount },
+              {
+                label: 'Ketepatan',
+                value:
+                  stats.tepatWaktuPct === null ? '—' : `${stats.tepatWaktuPct}%`,
+              },
+            ].map((s) => (
+              <div key={s.label} className="flex items-baseline justify-between gap-2">
+                <span className="text-[11px] text-slate-400">{s.label}</span>
+                <span className="text-sm font-bold text-white font-mono tabular-nums">
+                  {s.value}
+                </span>
+              </div>
+            ))}
           </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-slate-900 font-mono tabular-nums">
-            {stats.total}
-          </div>
-          <div className="mt-1 text-slate-500 text-[11px]">
-            Akumulasi seluruh riwayat piket
-          </div>
-        </div>
+        </aside>
 
-        {/* Metric 2 */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>Presensi Hari Ini</span>
-            <Clock className="w-4 h-4 text-orange-500" />
-          </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-orange-600 font-mono tabular-nums">
-            {stats.todayCount}
-          </div>
-          <div className="mt-1 text-slate-500 text-[11px]">
-            Masuk hari ini (WIB)
-          </div>
-        </div>
+        {/* ============ KONTEN ============ */}
+        {/* bukan <main>: halaman sudah punya satu <main>, dan <main> tidak boleh bersarang */}
+        <div className="lg:col-span-9 xl:col-span-10 space-y-5">
+          {view === 'ringkasan' ? (
+            <>
+          {/* Summary KPI Metrics */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiCard
+          label="Total Presensi Tercatat"
+          value={String(stats.total)}
+          hint="Akumulasi seluruh riwayat piket"
+          icon={<CheckCircle className="w-4 h-4" />}
+          accent="border-l-blue-500"
+          valueClass="text-white"
+        />
 
-        {/* Metric 3 */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-semibold">
-            <span>Tingkat Ketepatan Waktu</span>
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          </div>
-<div className="mt-2 text-2xl sm:text-3xl font-black text-emerald-600 font-mono tabular-nums">
-            {stats.tepatWaktuPct === null ? '—' : `${stats.tepatWaktuPct}%`}
-          </div>
-          <div className="mt-1 text-slate-500 text-[11px]">
-            {stats.tepatWaktuPct === null
+        <KpiCard
+          label="Presensi Hari Ini"
+          value={String(stats.todayCount)}
+          hint="Masuk hari ini (WIB)"
+          icon={<Clock className="w-4 h-4" />}
+          accent="border-l-ipb-orange"
+          valueClass="text-ipb-orange"
+        />
+
+        <KpiCard
+          label="Tingkat Ketepatan Waktu"
+          value={stats.tepatWaktuPct === null ? '—' : `${stats.tepatWaktuPct}%`}
+          hint={
+            stats.tepatWaktuPct === null
               ? 'Belum ada data untuk dihitung'
-              : 'Tepat dalam toleransi shift'}
-          </div>
-        </div>
+              : 'Tepat dalam toleransi shift'
+          }
+          icon={<ShieldCheck className="w-4 h-4" />}
+          accent="border-l-emerald-500"
+          valueClass="text-emerald-400"
+        />
 
-        {/* Metric 4 */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-2xs">
-          <div className="flex items-center justify-between gap-2 text-slate-500 text-xs font-semibold">
+        <div className="bg-slate-900 border border-slate-800 border-l-4 border-l-purple-500 rounded-xl p-4">
+          <div className="flex items-center justify-between gap-2 text-slate-400 text-[10px] font-semibold uppercase tracking-wider font-mono">
             <span className="truncate">Distribusi Sesi</span>
-            <Filter className="w-4 h-4 text-purple-600 shrink-0" />
+            <Filter className="w-4 h-4 text-purple-400 shrink-0" />
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-mono font-bold">
-            <span className="text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-              Pagi: {stats.pagi}
-            </span>
-            <span className="text-orange-700 bg-orange-50 px-2 py-0.5 rounded border border-orange-200">
-              Siang: {stats.siang}
-            </span>
-            <span className="text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
-              Sore: {stats.sore}
-            </span>
+          <div className="mt-2.5 space-y-1">
+            {[
+              { label: 'Pagi', value: stats.pagi, bar: 'bg-blue-500' },
+              { label: 'Siang', value: stats.siang, bar: 'bg-ipb-orange' },
+              { label: 'Sore', value: stats.sore, bar: 'bg-purple-500' },
+            ].map((s) => {
+              const max = Math.max(stats.pagi, stats.siang, stats.sore, 1);
+              return (
+                <div key={s.label} className="flex items-center gap-2">
+                  <span className="text-[10px] text-slate-400 w-10 font-mono shrink-0">
+                    {s.label}
+                  </span>
+                  <span className="text-[11px] text-white font-mono font-bold w-5 shrink-0">
+                    {s.value}
+                  </span>
+                  <span className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                    <span
+                      className={`block h-full rounded-full ${s.bar}`}
+                      style={{ width: `${Math.round((s.value / max) * 100)}%` }}
+                    />
+                  </span>
+                </div>
+              );
+            })}
           </div>
-          <div className="mt-1 text-slate-500 text-[11px]">
-            Jumlah per waktu piket
-          </div>
+<div className="mt-2 text-slate-500 text-[10px] font-mono">jumlah per waktu piket</div>
         </div>
-
       </div>
 
-      {/* Filter and Search Bar */}
-<div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs space-y-3">
+      {/* Sebaran lokasi & divisi */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <BreakdownCard
+                  title="Sebaran Lokasi"
+                  items={LOCATIONS.map((l) => ({
+                    label: l,
+                    value: rows.filter((r) => r.location === l).length,
+                    bar: 'bg-emerald-400',
+                  }))}
+                />
+                <BreakdownCard
+                  title="Sebaran Shift"
+                  items={[
+                    { label: 'Pagi 06.30', value: stats.pagi, bar: 'bg-blue-400' },
+                    { label: 'Siang 12.00', value: stats.siang, bar: 'bg-ipb-orange' },
+                    { label: 'Sore 16.00', value: stats.sore, bar: 'bg-purple-400' },
+                  ]}
+                />
+              </div>
+            </>
+          ) : (
+            <>
+{/* Filter and Search Bar */}
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-[11px] text-slate-500">
+          <div className="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
             <span
               className={`w-2 h-2 rounded-full ${
                 isLoadingSheet
-                  ? 'bg-amber-500 animate-pulse'
+                  ? 'bg-amber-400 animate-pulse'
                   : sheetError
                     ? 'bg-rose-500'
-                    : 'bg-emerald-500'
+                    : 'bg-emerald-400'
               }`}
             />
             <span>
@@ -587,36 +718,36 @@ const csvContent =
             type="button"
             onClick={loadFromSheet}
             disabled={isLoadingSheet}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-60 cursor-pointer min-h-[36px]"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-60 cursor-pointer min-h-[36px] font-mono"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSheet ? 'animate-spin' : ''}`} />
-            <span>Segarkan</span>
+            <span>refresh</span>
           </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
           
-          {/* Search Input */}
+{/* Search Input */}
           <div className="md:col-span-4 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-3 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama mahasiswa, NIM, lokasi..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
+              placeholder="cari nama / NIM / lokasi..."
+              className="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange text-white placeholder:text-slate-500 font-mono"
             />
           </div>
 
           {/* Quick Date Segmented Controls */}
-          <div className="md:col-span-5 flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto">
+          <div className="md:col-span-5 flex items-center bg-slate-800 p-1 rounded-lg border border-slate-700 overflow-x-auto">
             <button
               type="button"
               onClick={() => setDateFilterType('all')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
                 dateFilterType === 'all'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-ipb-blue text-white'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Semua
@@ -626,8 +757,8 @@ const csvContent =
               onClick={() => setDateFilterType('today')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
                 dateFilterType === 'today'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-ipb-blue text-white'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Hari Ini
@@ -637,8 +768,8 @@ const csvContent =
               onClick={() => setDateFilterType('yesterday')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
                 dateFilterType === 'yesterday'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-ipb-blue text-white'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Kemarin
@@ -648,8 +779,8 @@ const csvContent =
               onClick={() => setDateFilterType('week')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
                 dateFilterType === 'week'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-ipb-blue text-white'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               7 Hari
@@ -659,8 +790,8 @@ const csvContent =
               onClick={() => setDateFilterType('custom')}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
                 dateFilterType === 'custom'
-                  ? 'bg-white text-slate-900 shadow-2xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-ipb-blue text-white'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Pilih Tanggal
@@ -669,86 +800,84 @@ const csvContent =
 
           {/* Shift Filter Dropdown */}
           <div className="md:col-span-3 flex items-center gap-2">
-            <select
+<select
               value={shiftFilter}
               onChange={(e) => setShiftFilter(e.target.value as any)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-blue-500 bg-white text-slate-900"
+              className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange text-white font-mono"
             >
-              <option value="all">Semua Shift (Pagi/Siang/Sore)</option>
-              <option value="06.30">Shift 06.30 (Pagi)</option>
-              <option value="12.00">Shift 12.00 (Siang)</option>
-              <option value="16.00">Shift 16.00 (Sore)</option>
+              <option value="all">semua_shift</option>
+              <option value="06.30">06.30 (pagi)</option>
+              <option value="12.00">12.00 (siang)</option>
+              <option value="16.00">16.00 (sore)</option>
             </select>
           </div>
 
         </div>
 
-        {/* Custom Date Input if selected */}
+{/* Custom Date Input if selected */}
         {dateFilterType === 'custom' && (
           <div className="pt-2 flex items-center gap-3">
-            <span className="text-xs font-medium text-slate-600">Pilih Tanggal Spesifik:</span>
+            <span className="text-xs font-medium text-slate-400 font-mono">tanggal:</span>
             <input
               type="date"
               value={customDate}
               onChange={(e) => setCustomDate(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white text-slate-900"
+              className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-white font-mono"
             />
           </div>
         )}
       </div>
 
-      {/* Main Records Table (DiSekolahKu style) */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        
-        <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between">
-          <div>
-            <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-              Daftar Rekapitulasi Presensi Piket
+      {/* Main Records Table */}
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
+        <div className="px-4 sm:px-5 py-3.5 border-b border-slate-800 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-bold text-white text-sm font-mono">
+              daftar_presensi
             </h3>
-            <p className="text-xs text-slate-500">
-              Menampilkan {filteredRecords.length} dari total {rows.length} data absensi
+            <p className="text-[11px] text-slate-400 font-mono">
+              {filteredRecords.length} / {rows.length} baris ditampilkan
             </p>
           </div>
 
-          <span className="text-xs text-slate-500">
-            Data tersimpan lokal di perangkat ini
+          <span className="text-[10px] text-slate-500 font-mono shrink-0">
+            {sheetError ? 'sumber: local' : `sumber: sheet (${sheetRecords.length})`}
           </span>
         </div>
 
         {filteredRecords.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 text-slate-500 flex items-center justify-center mx-auto">
               <Search className="w-6 h-6" />
             </div>
-            <div className="text-sm font-semibold text-slate-700">
-              Tidak Ada Data Presensi Yang Sesuai
+            <div className="text-sm font-semibold text-slate-300 font-mono">
+              0 baris cocok
             </div>
-<p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Coba ubah filter tanggal atau kata kunci pencarian nama mahasiswa.
+            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+              Ubah filter tanggal atau kata kunci pencarian nama mahasiswa.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+<div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
+                <tr className="bg-slate-800/60 border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
                   <th className="py-3 px-4">Waktu (WIB)</th>
-                  <th className="py-3 px-4">Nama Mahasiswa & NIM</th>
-<th className="py-3 px-4">Divisi Piket</th>
+                  <th className="py-3 px-4">Mahasiswa</th>
+                  <th className="py-3 px-4">Divisi</th>
                   <th className="py-3 px-4">Shift</th>
-                  <th className="py-3 px-4">Lokasi Piket</th>
+                  <th className="py-3 px-4">Lokasi</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-center">Foto Bukti</th>
+                  <th className="py-3 px-4 text-center">Foto</th>
                   <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-xs sm:text-sm text-slate-800">
+              <tbody className="divide-y divide-slate-800 text-xs sm:text-sm text-slate-300">
                 {filteredRecords.map((rec) => (
-                  <tr key={rec.id} className="hover:bg-slate-50/80 transition-colors">
-                    
+                  <tr key={rec.id} className="hover:bg-slate-800/40 transition-colors">
                     {/* Timestamp */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="font-mono text-xs font-semibold text-slate-900">
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <div className="font-mono text-xs font-semibold text-white">
                         {rec.formattedDate}
                       </div>
                       <div className="text-[11px] font-mono text-slate-500">
@@ -757,37 +886,33 @@ const csvContent =
                     </td>
 
                     {/* Student Name & NIM */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">
-                        {rec.studentName}
-                      </div>
-                      <div className="text-[11px] font-mono text-blue-700 font-medium">
+                    <td className="py-3 px-4">
+                      <div className="font-semibold text-white">{rec.studentName}</div>
+                      <div className="text-[11px] font-mono text-slate-500">
                         {rec.studentNim}
                       </div>
                     </td>
 
-{/* Division */}
-                    <td className="py-3.5 px-4 max-w-[180px]">
+                    {/* Division */}
+                    <td className="py-3 px-4 max-w-[180px]">
                       <span
-                        className="text-[11px] text-slate-600 font-medium leading-tight"
+                        className="text-[11px] text-slate-400 leading-tight"
                         title={rec.division}
                       >
-                        {rec.division}
+                        {rec.division || '—'}
                       </span>
                     </td>
 
                     {/* Shift */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="font-mono font-bold text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                        {rec.shift} WIB
+                    <td className="py-3 px-4 whitespace-nowrap">
+                      <span className="font-mono font-bold text-[11px] px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-blue-300">
+                        {rec.shift}
                       </span>
                     </td>
 
                     {/* Location */}
-                    <td className="py-3.5 px-4 max-w-xs truncate" title={rec.location}>
-                      <span className="text-xs text-slate-700 font-medium">
-                        {rec.location}
-                      </span>
+                    <td className="py-3 px-4 max-w-xs truncate" title={rec.location}>
+                      <span className="text-xs text-slate-300">{rec.location}</span>
                       {rec.notes && (
                         <p className="text-[11px] text-slate-500 truncate italic">
                           &quot;{rec.notes}&quot;
@@ -795,38 +920,38 @@ const csvContent =
                       )}
                     </td>
 
-{/* Status */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    {/* Status */}
+                    <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex flex-wrap items-center gap-1">
                         <span
-                          className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded font-mono ${
                             rec.status === 'Tepat Waktu'
-                              ? 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
                               : rec.status === 'Toleransi'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-rose-100 text-rose-800'
+                                ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                : 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
                           }`}
                         >
                           {rec.status}
                         </span>
                         {/manual/i.test(rec.notes || '') && (
                           <span
-                            className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700"
+                            className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded font-mono bg-slate-700 text-slate-300"
                             title={rec.notes}
                           >
-                            Manual
+                            manual
                           </span>
                         )}
                       </div>
                     </td>
 
-{/* Photo Thumbnail */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                    {/* Photo Thumbnail */}
+                    <td className="py-3 px-4 text-center whitespace-nowrap">
                       {isViewablePhoto(rec.photoUrl) ? (
                         <button
                           type="button"
                           onClick={() => setPreviewRecord(rec)}
-                          className="group relative inline-block rounded-lg overflow-hidden border border-slate-200 hover:border-blue-500 transition-all shadow-2xs"
+                          className="group relative inline-block rounded-lg overflow-hidden border border-slate-700 hover:border-ipb-orange transition-all"
                         >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -834,13 +959,13 @@ const csvContent =
                             alt="Thumbnail Foto"
                             className="w-12 h-10 object-cover group-hover:scale-105 transition-transform"
                           />
-                          <div className="absolute inset-0 bg-blue-900/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                          <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
                             <Eye className="w-3.5 h-3.5" />
                           </div>
                         </button>
                       ) : (
                         <span
-                          className="inline-flex items-center justify-center w-12 h-10 rounded-lg border border-dashed border-slate-300 text-slate-400"
+                          className="inline-flex items-center justify-center w-12 h-10 rounded-lg border border-dashed border-slate-700 text-slate-600"
                           title={rec.photoUrl || 'Foto tidak tersimpan'}
                         >
                           <Camera className="w-4 h-4" />
@@ -849,12 +974,12 @@ const csvContent =
                     </td>
 
                     {/* Actions */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
                         <button
                           type="button"
                           onClick={() => setPreviewRecord(rec)}
-                          className="p-1.5 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-ipb-orange hover:bg-slate-800 transition-colors cursor-pointer"
                           title="Lihat Detail & Foto"
                         >
                           <Eye className="w-4 h-4" />
@@ -863,45 +988,50 @@ const csvContent =
                         <button
                           type="button"
                           onClick={() => onDeleteRecord(rec.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-600 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
                           title="Hapus Data Presensi"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
-
                   </tr>
                 ))}
-              </tbody>
+</tbody>
             </table>
           </div>
         )}
-
+      </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* MODAL 1: PREVIEW FOTO DETAIL (Full Resolution) */}
       {previewRecord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl animate-fade-in border border-slate-200">
-            
-            <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-sm">Dokumentasi Foto Presensi</span>
-                <span className="font-mono text-xs text-orange-400">
+<div className="bg-slate-900 rounded-2xl max-w-xl w-full overflow-hidden border border-slate-700 animate-fade-in">
+            <div className="px-4 py-3 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <Camera className="w-4 h-4 text-ipb-orange shrink-0" />
+                <span className="font-bold text-sm text-white font-mono truncate">
+                  bukti_foto
+                </span>
+                <span className="font-mono text-[10px] text-slate-500 truncate">
                   {previewRecord.id}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewRecord(null)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
+                aria-label="Tutup"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-<div className="p-4 bg-black flex items-center justify-center max-h-96 overflow-hidden">
+            <div className="p-4 bg-black flex items-center justify-center max-h-96 overflow-hidden">
               {isViewablePhoto(previewRecord.photoUrl) ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -910,52 +1040,68 @@ const csvContent =
                   className="max-h-96 w-auto object-contain rounded-lg"
                 />
               ) : (
-                <div className="text-center text-slate-300 px-4 py-8 space-y-2">
+                <div className="text-center text-slate-400 px-4 py-8 space-y-2">
                   <Camera className="w-8 h-8 mx-auto" />
-                  <p className="text-xs">Foto tidak tersimpan di penyimpanan online.</p>
-                  <p className="text-[11px] text-slate-400 break-all">
-                    Referensi: {previewRecord.photoUrl || 'tidak ada'}
+                  <p className="text-xs">
+                    Foto tidak tersimpan di penyimpanan online.
+                  </p>
+                  <p className="text-[11px] text-slate-600 break-all font-mono">
+                    referensi: {previewRecord.photoUrl || 'tidak ada'}
                   </p>
                 </div>
               )}
             </div>
 
-            <div className="p-5 space-y-3 bg-white text-xs sm:text-sm">
-              <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-200">
+            <div className="p-5 space-y-3 bg-slate-900 text-xs sm:text-sm">
+              <div className="grid grid-cols-2 gap-3 pb-3 border-b border-slate-800">
                 <div>
-                  <span className="text-slate-500 block text-xs">Mahasiswa:</span>
-                  <span className="font-bold text-slate-900">{previewRecord.studentName}</span>
+                  <span className="text-slate-500 block text-[10px] font-mono uppercase">
+                    mahasiswa
+                  </span>
+                  <span className="font-semibold text-white">{previewRecord.studentName}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-xs">NIM:</span>
-                  <span className="font-mono text-slate-800">{previewRecord.studentNim}</span>
+                  <span className="text-slate-500 block text-[10px] font-mono uppercase">nim</span>
+                  <span className="font-mono text-slate-300">{previewRecord.studentNim}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-xs">Waktu Submit:</span>
-                  <span className="font-medium text-slate-800">
-                    {previewRecord.formattedDate} · {previewRecord.formattedTime}
+                  <span className="text-slate-500 block text-[10px] font-mono uppercase">
+                    waktu_submit
+                  </span>
+                  <span className="font-mono text-slate-300">
+                    {previewRecord.formattedDate} {previewRecord.formattedTime}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block text-xs">Shift Piket:</span>
-                  <span className="font-bold text-blue-700">{previewRecord.shift} WIB</span>
+                  <span className="text-slate-500 block text-[10px] font-mono uppercase">
+                    shift
+                  </span>
+                  <span className="font-mono font-bold text-blue-300">
+                    {previewRecord.shift} WIB
+                  </span>
                 </div>
               </div>
 
-<div>
-                  <span className="text-slate-500 block text-xs">Divisi Piket:</span>
-                  <span className="font-medium text-slate-900">{previewRecord.division}</span>
-                </div>
+              <div>
+                <span className="text-slate-500 block text-[10px] font-mono uppercase">
+                  divisi_piket
+                </span>
+                <span className="text-slate-300">{previewRecord.division || '—'}</span>
+              </div>
 
-                <div>
-                  <span className="text-slate-500 block text-xs">Lokasi Kandang:</span>
-                  <span className="font-medium text-slate-900">{previewRecord.location}</span>
-                </div>
+              <div>
+                <span className="text-slate-500 block text-[10px] font-mono uppercase">
+                  lokasi
+                </span>
+                <span className="text-slate-300">{previewRecord.location}</span>
+              </div>
 
               {previewRecord.notes && (
                 <div>
-                  <span className="text-slate-500 block text-xs">Catatan Kegiatan:</span>
-                  <p className="p-2.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 text-xs">
+                  <span className="text-slate-500 block text-[10px] font-mono uppercase">
+                    catatan_kegiatan
+                  </span>
+                  <p className="p-2.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-xs">
                     {previewRecord.notes}
                   </p>
                 </div>
@@ -965,13 +1111,12 @@ const csvContent =
                 <button
                   type="button"
                   onClick={() => setPreviewRecord(null)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold text-xs transition-colors"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg font-semibold text-xs font-mono transition-colors cursor-pointer"
                 >
-                  Tutup Tampilan
+                  tutup
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       )}
@@ -979,12 +1124,12 @@ const csvContent =
       {/* MODAL 2: TAMBAH DATA MANUAL OLEH ADMIN */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl animate-fade-in border border-slate-200">
+          <div className="bg-slate-900 rounded-2xl max-w-lg w-full overflow-hidden border border-slate-700 animate-fade-in">
             
-            <div className="p-5 bg-blue-800 text-white flex items-center justify-between">
+            <div className="px-5 py-4 bg-slate-800 border-b border-slate-700 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-base">Tambah Presensi Manual</h3>
-                <p className="text-xs text-blue-100">Untuk data susulan atau dispensasi piket</p>
+                <h3 className="font-bold text-base text-white font-mono">input_presensi_manual</h3>
+                <p className="text-[11px] text-slate-400 font-mono">Untuk data susulan atau dispensasi piket</p>
               </div>
               <button
                 type="button"
@@ -995,9 +1140,9 @@ const csvContent =
               </button>
             </div>
 
-            <form onSubmit={handleCreateManual} className="p-6 space-y-4 text-xs sm:text-sm">
+            <form onSubmit={handleCreateManual} className="p-6 space-y-4 text-xs sm:text-sm text-slate-200">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">
                   Nama Mahasiswa
                 </label>
                 <input
@@ -1006,12 +1151,12 @@ const csvContent =
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
                   placeholder="Nama Lengkap..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">
                   NIM Mahasiswa
                 </label>
                 <input
@@ -1019,36 +1164,32 @@ const csvContent =
                   value={manualNim}
                   onChange={(e) => setManualNim(e.target.value)}
                   placeholder="Contoh: J0301221001"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white font-mono"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white font-mono focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange"
                 />
               </div>
 
 <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">
                   Divisi Piket
                 </label>
-                <select
+                <input
+                  type="text"
                   value={manualDivision}
-                  onChange={(e) => setManualDivision(e.target.value as PiketDivision)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
-                >
-                  {DIVISIONS.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(e) => setManualDivision(e.target.value)}
+                  placeholder="Tuliskan divisi piket"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">
                     Shift Piket
                   </label>
                   <select
                     value={manualShift}
                     onChange={(e) => setManualShift(e.target.value as PiketShift)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange"
                   >
                     <option value="06.30">06.30 (Pagi)</option>
                     <option value="12.00">12.00 (Siang)</option>
@@ -1057,7 +1198,7 @@ const csvContent =
                 </div>
 
 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">
                     Status Kehadiran
                   </label>
                   <select
@@ -1065,7 +1206,7 @@ const csvContent =
                     onChange={(e) =>
                       setManualStatus(e.target.value as AttendanceRecord['status'])
                     }
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
+                    className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange"
                   >
                     <option value="Tepat Waktu">Tepat Waktu</option>
                     <option value="Terlambat">Terlambat</option>
@@ -1075,13 +1216,13 @@ const csvContent =
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">
                   Lokasi Unit Kandang
                 </label>
                 <select
                   value={manualLocation}
                   onChange={(e) => setManualLocation(e.target.value as UnitLocation)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange"
                 >
 {LOCATIONS.map((l) => (
                     <option key={l} value={l}>
@@ -1092,7 +1233,7 @@ const csvContent =
               </div>
 
 <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">
                   Foto Bukti (Opsional)
                 </label>
                 {manualPhotoPreview ? (
@@ -1109,14 +1250,14 @@ const csvContent =
                         setManualPhoto('');
                         setManualPhotoPreview('');
                       }}
-                      className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-white/90 text-rose-600 hover:bg-white transition-colors"
+                      className="absolute top-1.5 right-1.5 p-1.5 rounded-lg bg-slate-900/90 text-rose-400 hover:bg-slate-900 transition-colors cursor-pointer"
                       title="Hapus foto"
                     >
                       <X className="w-4 h-4" />
                     </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center gap-1.5 py-5 px-3 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-blue-500 transition-colors text-center">
+                  <label className="flex flex-col items-center justify-center gap-1.5 py-5 px-3 border-2 border-dashed border-slate-700 rounded-lg cursor-pointer hover:border-ipb-orange transition-colors text-center">
                     <Camera className="w-6 h-6 text-slate-400" />
                     <span className="text-[11px] text-slate-500">
                       Ketuk untuk pilih foto
@@ -1132,7 +1273,7 @@ const csvContent =
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono mb-1">
                   Catatan Keterangan
                 </label>
                 <textarea
@@ -1140,26 +1281,26 @@ const csvContent =
                   value={manualNotes}
                   onChange={(e) => setManualNotes(e.target.value)}
                   placeholder="Alasan input manual oleh koordinator..."
-                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
+                  className="w-full px-3 py-2 rounded-lg bg-slate-800 border border-slate-700 text-white focus:outline-hidden focus:ring-2 focus:ring-ipb-orange focus:border-ipb-orange"
                 />
               </div>
 
               {manualError && (
-                <p className="text-xs text-rose-600 font-medium">{manualError}</p>
+                <p className="text-xs text-rose-400 font-mono">{manualError}</p>
               )}
 
               <div className="pt-3 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
+                  className="px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 font-semibold font-mono transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
 <button
                   type="submit"
                   disabled={isSavingManual}
-                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-lg bg-ipb-orange hover:bg-orange-600 text-white font-bold font-mono text-xs disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSavingManual ? 'Menyimpan...' : 'Simpan Data'}
                 </button>
