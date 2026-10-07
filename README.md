@@ -63,20 +63,38 @@ yang mengecek satu per satu:
 - Spreadsheet ketemu atau tidak
 - Tab `data_absen61` ada atau tidak
 - Header 9 kolom sudah sesuai atau belum
-- Folder Drive bisa diakses atau tidak
+- Mode bound atau standalone
 
 Kalau ada yang salah, perbaiki dulu sebelum lanjut. Jangan sampai data masuk ke
 tempat yang keliru.
 
-**Langkah 4 — folder Drive (opsional)**
+Tidak ada cek folder Drive lagi, karena script ini tidak menyentuh Drive sama
+sekali. Bukti foto disimpan sebagai referensi nama file saja.
 
-Kalau mau foto bukti ikut tersimpan ke Drive, buat folder lalu salin ID-nya dari
-URL `https://drive.google.com/drive/folders/<FOLDER_ID>` — ambil **hanya** bagian
-ID, tanpa `?usp=sharing`. Tempel ke `FOLDER_ID` di `Code.gs`.
+**Langkah 4 — (tidak ada langkah Drive)**
 
-Kalau `FOLDER_ID` dibiarkan kosong, upload dilewati tapi **Referensi Foto tetap
-terisi**. Ini pilihan yang wajar: kolom Referensi Foto sudah cukup untuk
-mencocokkan bukti dengan foto di perangkat.
+Dulu ada langkah membuat folder Drive. Sekarang tidak berlaku: `Code.gs` tidak
+punya `DriveApp` maupun `FOLDER_ID`, jadi tidak ada yang perlu disiapkan di
+Drive.
+
+Konsekuensinya, deployment ini hanya butuh **satu** izin: akses spreadsheet.
+Kolom Referensi Foto berisi nama file seperti
+`[FILE] Siti_Nurhaliza_06.30_063012.jpg`, bukan tautan. Kalau butuh bukti
+gambarnya, foto asli ada di perangkat masing-masing mahasiswa.
+
+Satu hal yang perlu disetel: **Script Property**. Kalau `Code.gs` lu dibuka dari
+Extensions > Apps Script milik spreadsheet itu, tidak perlu apa pun — script
+otomatis tahu spreadsheet mana. Tapi kalau script-nya berdiri sendiri:
+
+`Project Settings > Script Properties > Add script property`
+- nama: `SPREADSHEET_ID`
+- nilai: ID dari URL `https://docs.google.com/spreadsheets/d/<ID>/edit`
+
+**Kenapa lewat Script Properties dan bukan ditulis di `Code.gs`?** ID spreadsheet
+setengah rahasia. Kalau sharing-nya "Siapa saja dengan link", siapa pun yang punya
+ID itu bisa menulis ke sheet. Karena `Code.gs` masuk repo publik, ID-nya tidak
+boleh ikut. Ada tes otomatis yang gagal kalau `SPREADSHEET_ID` diisi literal di
+kode.
 
 **Langkah 5 — deploy**
 
@@ -88,11 +106,18 @@ Salin URL yang berakhiran `/exec`.
 
 **Langkah 6 — sambungkan ke aplikasi**
 
-Set `NEXT_PUBLIC_GAS_WEBHOOK_URL` ke URL `/exec` tadi, di `.env.local` untuk
-lokal atau di panel environmentVariable untuk hosting.
+Set `NEXT_PUBLIC_GAS_WEBHOOK_URL` ke URL `/exec` tadi. Lokalnya di `.env.local`,
+untuk hosting di panel environment variable.
 
 Kalau nanti diubah kode `Code.gs`: **Deploy > Manage deployments > ikon pensil >
 New version > Deploy**. URL `/exec` sendiri tidak berubah.
+
+> **Penting soal Vercel.** Prefix `NEXT_PUBLIC_` berarti Next.js menyalin nilainya
+> ke dalam JS yang dikirim ke browser **saat build**, bukan saat runtime. Jadi kalau
+> env baru ditambahkan lalu halamannya di-refresh saja, tidak akan berubah — harus
+> **build ulang / redeploy**. Panel admin akan tetap nulis
+> "Sumber data: local (spreadsheet belum terhubung)" kalau build-nya dilakukan
+> tanpa env tersebut.
 
 ### Kalau mau ganti PIN
 
@@ -119,7 +144,7 @@ Endpoint bantu: `POST /seed` isi 3 data contoh, `POST /reset` kosongkan.
 Logika `Code.gs` sendiri bisa diuji tanpa Google sama sekali:
 
 ```bash
-npm run test:gas           # 13 tes dengan stub API Apps Script
+npm run test:gas           # 30 tes dengan stub API Apps Script
 ```
 
 ### Verifikasi
@@ -127,7 +152,7 @@ npm run test:gas           # 13 tes dengan stub API Apps Script
 ```bash
 npm run lint
 npm run build
-npm run test:gas      # 13 tes logika Code.gs tanpa perlu Google
+npm run test:gas      # 30 tes logika Code.gs tanpa perlu Google
 ```
 
 ## Deploy online
@@ -146,7 +171,18 @@ coba-gratis). Yang perlu:
 
 4. Deploy.
 
-Tidak perlu `npm run build` manual — Vercel yang handle.
+Tidak perlu `npm run build` manual — Vercel yang handle. Tapi env **harus** sudah
+terpasang sebelum deploy, karena `NEXT_PUBLIC_*` di-inline saat build.
+
+**Menjalankan build produksi di lokal:**
+
+```bash
+npm run build
+npm start          # http://localhost:3000
+```
+
+`npm start` memakai `next start` biasa, bukan mode standalone, supaya tidak
+melempar warning dan tidak gagal start.
 
 **Soal kamera:** `getUserMedia` hanya aktif di HTTPS atau `localhost`. Di
 localhost_select `npm run dev`, dari HP lewat IP lokal (`npm run dev -- -H 0.0.0.0`)

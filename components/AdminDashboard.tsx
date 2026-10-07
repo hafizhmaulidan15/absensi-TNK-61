@@ -373,6 +373,13 @@ const csvContent =
       setManualError('NIM wajib diisi.');
       return;
     }
+    // Code.gs menolak POST tanpa foto, jadi UI harus menolak lebih dulu.
+    // Kalau tidak, fetch mode:'no-cors' tetap "berhasil" dari sisi browser
+    // sementara server diam-diam membuang datanya.
+    if (!manualPhoto) {
+      setManualError('Foto bukti wajib dipilih sebelum menyimpan.');
+      return;
+    }
     setIsSavingManual(true);
     setManualError(null);
 
@@ -1300,7 +1307,7 @@ onChange={(e) => setManualNim(e.target.value)}
 <div>
                 <div className="flex items-center gap-1.5 mb-1">
                   <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                    Foto Bukti (Opsional)
+                    Foto Bukti <span className="text-rose-500">*</span>
                   </label>
                   <span className="px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200 text-[9px] font-bold uppercase tracking-wide">
                     Manual
@@ -1330,7 +1337,7 @@ onChange={(e) => setManualNim(e.target.value)}
                   <label className="flex flex-col items-center justify-center gap-1.5 py-5 px-3 border-2 border-dashed border-orange-300 bg-orange-50/40 rounded-lg cursor-pointer hover:border-ipb-orange transition-colors text-center">
                     <Camera className="w-6 h-6 text-orange-600" />
                     <span className="text-[11px] text-orange-800">
-                      Ketuk untuk pilih foto
+                      Ketuk untuk pilih foto <span className="text-rose-500">*</span>
                     </span>
                     <input
                       type="file"

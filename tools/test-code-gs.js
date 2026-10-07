@@ -101,7 +101,15 @@ function t(name, fn) {
   try { fn(); tests.push('OK   ' + name); }
   catch (e) { tests.push('FAIL ' + name + ' -> ' + e.message); }
 }
-const post = (obj) => JSON.parse(doPost({ postData: { contents: JSON.stringify(obj) } }).s);
+// Helper POST. `lokasi` dan `waktuPiket` di-default supaya setiap tes boleh
+// fokus pada satu hal tanpa mengulang boilerplate. Tes yang memang menguji
+// field wajib menimpanya secara eksplisit dengan '' atau menghilangkannya.
+const post = (obj) => {
+  const payload = Object.assign({ lokasi: 'Kandang Puyuh', waktuPiket: '06.30' }, obj);
+  if (payload.lokasi === undefined) delete payload.lokasi;
+  if (payload.waktuPiket === undefined) delete payload.waktuPiket;
+  return JSON.parse(doPost({ postData: { contents: JSON.stringify(payload) } }).s);
+};
 const reset = () => { SpreadsheetApp._ss._sheets = {}; };
 const rows = () => SpreadsheetApp._ss._sheets['data_absen61']._v;
 
@@ -120,6 +128,36 @@ t('doPost TOLAK foto kosong', () => {
   reset();
   const r = post({ namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', fotoBase64: '' });
   if (r.status !== 'error' || !/Foto/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK shift kosong', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', waktuPiket: '', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/Shift/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK lokasi kosong', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', lokasi: '', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/Lokasi/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK nama kepanjangan', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A'.repeat(101), nim: 'J1', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/terlalu panjang/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK catatan kepanjangan', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', catatan: 'x'.repeat(501), fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/terlalu panjang/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK foto kepanjangan', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', fotoBase64: 'data:image/jpeg;base64,' + 'A'.repeat(9 * 1024 * 1024) });
+  if (r.status !== 'error' || !/terlalu besar/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('nama 100 karakter masih diterima (batas tidak off-by-one)', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A'.repeat(100), nim: 'J1', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'success') throw new Error(JSON.stringify(r));
 });
 t('doPost TOLAK tanpa payload', () => {
   const r = JSON.parse(doPost(null).s);
