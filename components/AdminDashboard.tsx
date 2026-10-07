@@ -94,10 +94,35 @@ interface AdminDashboardProps {
 
 const CORRECT_PIN = process.env.NEXT_PUBLIC_ADMIN_PIN ?? 'TNK61SVIPB';
 
-// Hanya data URL foto (kamera) dan link http(s) yang bisa ditampilkan.
-// Nilai referensi "[FILE] nama_timestamp" bukan URL, jadi tidak di-render sebagai gambar.
+// Hanya data URL foto (kamera atau unggahan) yang bisa ditampilkan sebagai gambar.
+// Nilai referensi "[FILE] ..." dari spreadsheet bukan URL, jadi ditampilkan
+// sebagai teks referensi di modal preview.
 const isViewablePhoto = (url: string) =>
   !!url && (url.startsWith('data:image/') || url.startsWith('http://') || url.startsWith('https://'));
+
+/**
+ * Data manual dikenali dari dua penanda sekaligus:
+ * catatan berisi [INPUT MANUAL], atau referensi foto berawalan MANUAL_.
+ * Foto admin sengaja dibedakan supaya tidak tertukar bukti mahasiswa.
+ */
+const isManualRecord = (rec: { notes?: string; photoUrl?: string }) =>
+  /manual/i.test(rec.notes || '') || /\[FILE\]\s*MANUAL_/i.test(rec.photoUrl || '');
+
+/** Warna badge status; "Izin" dan "Tidak Hadir" hanya muncul dari input admin. */
+const statusBadgeClass = (status: AttendanceRecord['status']) => {
+  switch (status) {
+    case 'Tepat Waktu':
+      return 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200';
+    case 'Toleransi':
+      return 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200';
+    case 'Terlambat':
+      return 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200';
+    case 'Izin':
+      return 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200';
+    default:
+      return 'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200';
+  }
+};
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   records,
@@ -124,7 +149,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     if (!gasWebhookUrl) {
       setSheetRecords([]);
       setSheetError(
-        'GAS_WEBHOOK_URL di app/page.tsx masih kosong. Isi URL /exec dari deployment Apps Script TNK 61 untuk bisa menarik data spreadsheet.'
+        'URL /exec Apps Script belum diisi. Set NEXT_PUBLIC_GAS_WEBHOOK_URL di environment variable, lalu klik Segarkan.'
       );
       return;
     }
@@ -145,10 +170,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             division: row.divisi || '',
             shift: (row.shift || '06.30') as PiketShift,
             location: (row.lokasi || 'Kandang Puyuh') as UnitLocation,
-            photoUrl: row.urlFoto || '',
+            // Code.gs mengirim refFoto; urlFoto dipertahankan sebagai mirror
+            // supaya data lama dari format sebelumnya tetap terbaca.
+            photoUrl: row.refFoto || row.urlFoto || '',
             notes: row.catatan || '',
             status: (row.status || 'Tepat Waktu') as AttendanceRecord['status'],
-            verified: /manual/i.test(row.catatan || ''),
+            verified: isManualRecord({
+              notes: row.catatan,
+              photoUrl: row.refFoto || row.urlFoto || '',
+            }),
             syncedToDrive: true,
           })
         );
@@ -384,6 +414,19 @@ const csvContent =
 
       onAddManualRecord(newRec);
       setShowAddModal(false);
+
+      // Tarik ulang dari spreadsheet.
+      // Tanpa ini baris baru tidak akan tampil: `rows` memakai sheetRecords
+      // selama isinya tidak kosong, dan record manual hanya tersimpan di
+      // localStorage sampai sheet dibaca ulang.
+      if (gasWebhookUrl) {
+        try {
+          await loadFromSheet();
+        } catch {
+          // Kegagalan refresh tidak membatalkan penyimpanan.
+        }
+      }
+
       setManualName('');
       setManualNim('');
       setManualNotes('');
@@ -917,23 +960,13 @@ const csvContent =
                     {/* Status */}
                     <td className="py-3 px-4 whitespace-nowrap">
                       <div className="flex flex-wrap items-center gap-1">
-                        <span
-                          className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded ${
-                            rec.status === 'Tepat Waktu'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : rec.status === 'Toleransi'
-                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }`}
-                        >
-                          {rec.status}
-                        </span>
-                        {/manual/i.test(rec.notes || '') && (
+                        <span className={statusBadgeClass(rec.status)}>{rec.status}</span>
+                        {isManualRecord(rec) && (
                           <span
-                            className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600"
-                            title={rec.notes}
+                            className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200"
+                            title={rec.notes || 'Input manual oleh admin'}
                           >
-                            manual
+                            Manual
                           </span>
                         )}
                       </div>
@@ -1205,6 +1238,8 @@ const csvContent =
                     <option value="Tepat Waktu">Tepat Waktu</option>
                     <option value="Terlambat">Terlambat</option>
                     <option value="Toleransi">Toleransi</option>
+                    <option value="Izin">Izin / Dispensasi</option>
+                    <option value="Tidak Hadir">Tidak Hadir</option>
                   </select>
                 </div>
               </div>
@@ -1227,9 +1262,14 @@ const csvContent =
               </div>
 
 <div>
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                  Foto Bukti (Opsional)
-                </label>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Foto Bukti (Opsional)
+                  </label>
+                  <span className="px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200 text-[9px] font-bold uppercase tracking-wide">
+                    Manual
+                  </span>
+                </div>
                 {manualPhotoPreview ? (
                   <div className="relative inline-block">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1251,9 +1291,9 @@ const csvContent =
                     </button>
                   </div>
                 ) : (
-                  <label className="flex flex-col items-center justify-center gap-1.5 py-5 px-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-ipb-blue transition-colors text-center">
-                    <Camera className="w-6 h-6 text-slate-500" />
-                    <span className="text-[11px] text-slate-500">
+                  <label className="flex flex-col items-center justify-center gap-1.5 py-5 px-3 border-2 border-dashed border-orange-300 bg-orange-50/40 rounded-lg cursor-pointer hover:border-ipb-orange transition-colors text-center">
+                    <Camera className="w-6 h-6 text-orange-600" />
+                    <span className="text-[11px] text-orange-800">
                       Ketuk untuk pilih foto
                     </span>
                     <input
@@ -1264,6 +1304,11 @@ const csvContent =
                     />
                   </label>
                 )}
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Referensi file di spreadsheet akan diberi awalan{' '}
+                  <code className="text-orange-700">MANUAL_</code> supaya tidak tertukar
+                  bukti mahasiswa.
+                </p>
               </div>
 
               <div>

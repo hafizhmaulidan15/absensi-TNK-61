@@ -13,10 +13,13 @@ import { getWIBTimeParts } from '@/lib/timeUtils';
 
 const STORAGE_KEY = 'tnk61_attendance_records_v1';
 
-// TODO(ganti): tempel URL /exec dari deployment Apps Script milik angkatan 61.
-// Sheet dan Drive TNK 61 belum dibuat, jadi selama string ini kosong
-// setiap submit akan gagal dan hanya tersimpan di localStorage browser.
-const GAS_WEBHOOK_URL = '';
+// URL /exec dari deployment Apps Script milik angkatan 61.
+//
+// Default ini kosong supaya repo ini bisa dipakai tanpa backend apa pun.
+// Untuk produksi, set lewat environment variable di host (Vercel/hosting lain):
+//   GAS_WEBHOOK_URL=https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec
+// Env selalu menang, jadi kode tidak perlu diedit saat ganti deployment.
+const GAS_WEBHOOK_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL ?? '';
 
 const emptySubscribe = () => () => {};
 

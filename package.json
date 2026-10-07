@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "clean": "next clean"
+    "clean": "next clean",
+    "mock:gas": "node tools/mock-gas.js",
+    "test:gas": "node tools/test-code-gs.js"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",

@@ -22,7 +22,9 @@ export interface AttendanceRecord {
   location: UnitLocation;
   photoUrl: string; // Data URL or Drive link
   notes?: string; // Deskripsi kegiatan piket lapangan
-  status: 'Tepat Waktu' | 'Terlambat' | 'Toleransi';
+  // Tiga status pertama dipakai form mahasiswa (dihitung otomatis).
+  // "Izin" dan "Tidak Hadir" hanya diisi admin lewat input manual.
+  status: 'Tepat Waktu' | 'Terlambat' | 'Toleransi' | 'Izin' | 'Tidak Hadir';
   verified: boolean;
   syncedToDrive?: boolean;
 }
