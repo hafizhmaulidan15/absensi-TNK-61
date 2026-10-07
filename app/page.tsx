@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
+import { CampusTopBar } from '@/components/CampusTopBar';
 import { HeroBanner } from '@/components/HeroBanner';
+import { ShiftPicker } from '@/components/ShiftPicker';
+import { AcademicProfileCard } from '@/components/AcademicProfileCard';
 import { StudentForm } from '@/components/StudentForm';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import { GuidanceModal } from '@/components/GuidanceModal';
-import { AttendanceRecord, PiketShift } from '@/types/attendance';
+import { AttendanceRecord, PiketShift, UnitLocation } from '@/types/attendance';
 import { INITIAL_RECORDS } from '@/lib/sampleData';
 import { getWIBTimeParts } from '@/lib/timeUtils';
 
@@ -28,6 +31,8 @@ export default function Home() {
   const [currentTab, setCurrentTab] = useState<'student' | 'admin'>('student');
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [selectedShift, setSelectedShift] = useState<PiketShift>('06.30');
+  // Disinkronkan dari form supaya kartu ringkasan lokasi di kolom kiri menyorot unit terpilih
+  const [selectedLocation, setSelectedLocation] = useState<UnitLocation>('Kandang Puyuh');
 
   // Persistence
   const [records, setRecords] = useState<AttendanceRecord[]>(INITIAL_RECORDS);
@@ -132,7 +137,7 @@ export default function Home() {
   // Prevent hydration mismatch between server and client
   if (!mounted) {
     return (
-      <div className="min-h-screen flex flex-col bg-slate-100/60 text-slate-900 font-sans">
+      <div className="min-h-screen flex flex-col bg-ipb-slate text-slate-900 font-sans">
         <header className="sticky top-0 z-40 bg-white/95 border-b border-slate-200 h-16" />
         <main className="flex-1 max-w-7xl mx-auto px-4 py-8 w-full" />
       </div>
@@ -140,7 +145,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100/60 text-slate-900 font-sans selection:bg-blue-600 selection:text-white pb-10">
+    <div className="min-h-screen flex flex-col bg-ipb-slate text-slate-900 font-sans selection:bg-ipb-blue selection:text-white pb-10">
+      {/* Top Bar resmi kampus */}
+      <CampusTopBar />
+
       {/* Navigation */}
       <Navbar
         currentTime={currentTime}
@@ -154,20 +162,33 @@ export default function Home() {
       {/* Main View Area */}
       <main className="flex-1">
         {currentTab === 'student' ? (
-          <div>
-            <HeroBanner
-              currentTime={currentTime}
-              selectedShift={selectedShift}
-              onSelectShift={setSelectedShift}
-            />
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-6 lg:py-8">
+            {/* Layout 2 kolom: panel kontrol kiri (sticky di desktop) + form kanan */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
+              <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-24">
+                <HeroBanner currentTime={currentTime} />
 
-            <StudentForm
-              currentTime={currentTime}
-              selectedShift={selectedShift}
-              setSelectedShift={setSelectedShift}
-              onAttendanceSubmitted={handleAttendanceSubmitted}
-              gasWebhookUrl={gasWebhookUrl}
-            />
+                <ShiftPicker
+                  currentTime={currentTime}
+                  selectedShift={selectedShift}
+                  onSelectShift={setSelectedShift}
+                  onOpenGuidance={() => setIsGuidanceOpen(true)}
+                />
+
+                <AcademicProfileCard selectedLocation={selectedLocation} />
+              </div>
+
+              <div className="lg:col-span-7 xl:col-span-8">
+                <StudentForm
+                  currentTime={currentTime}
+                  selectedShift={selectedShift}
+                  onAttendanceSubmitted={handleAttendanceSubmitted}
+                  gasWebhookUrl={gasWebhookUrl}
+                  onOpenGuidance={() => setIsGuidanceOpen(true)}
+                  onLocationChange={setSelectedLocation}
+                />
+              </div>
+            </div>
           </div>
         ) : (
           <div className="py-4">

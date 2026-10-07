@@ -1,24 +1,15 @@
 @import "tailwindcss";
 
-html {
-  overflow-x: hidden;
-  -webkit-tap-highlight-color: transparent;
-}
-
-body {
-  overflow-x: hidden;
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
-}
-
-/* Prevent iOS zoom-on-focus for form controls */
-@media (max-width: 640px) {
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-}
-
+/*
+ * Palet resmi Sekolah Vokasi IPB University
+ * Rujukan visual: sv.ipb.ac.id/teknologi-dan-manajemen-ternak-2025/
+ */
 @theme {
+  --color-ipb-blue: #003882;
+  --color-ipb-blue-light: #0047ba;
+  --color-ipb-orange: #f58220;
+  --color-ipb-slate: #f8fafc;
+
   --breakpoint-xs: 30rem;
   --animate-fade-in: fade-in 0.3s ease-out;
 
@@ -26,4 +17,29 @@ body {
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
   }
+}
+
+html {
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overflow-x: hidden;
+  background-color: #f8fafc;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Cegah zoom iOS saat fokus pada form control */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Angka tabular supaya jam tidak "bergeser" tiap detik */
+.tabular-nums-clock {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
 }
