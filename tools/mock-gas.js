@@ -7,7 +7,7 @@
 //  - doPost: validasi nama/waktu, tag [INPUT MANUAL], referensi [FILE] MANUAL_
 //  - doGet : 9 kolom, terbaru di atas, header dilewati
 //
-// Yang berbeda: tidak ada Google Drive sama sekali, jadi folder tidak relevan.
+// Tidak ada Google Drive sama sekali, sama seperti Code.gs production.
 
 const http = require('http');
 
@@ -37,16 +37,14 @@ let sheet = [HEADERS.slice()];
 const str = (v) => String(v === null || v === undefined ? '' : v).trim();
 
 function processFoto(fotoBase64, nama, waktu, isManual) {
-  if (!fotoBase64) return { ref: '', uploaded: false, url: '' };
+  if (!fotoBase64) return { ref: '' };
 
-  let mime = 'image/jpeg';
   let ext = 'jpg';
-  const m = String(fotoBase64).match(/^data:(image\/\w+);base64,/);
+  const m = String(fotoBase64).match(/^data:image\/(png|jpe?g|webp|heic)/);
   if (m) {
-    mime = m[1];
-    ext = mime.split('/')[1] || 'jpg';
+    ext = m[1];
+    if (ext === 'jpeg') ext = 'jpg';
   }
-  if (ext === 'jpeg') ext = 'jpg';
 
   const now = new Date();
   const pad = (n) => String(n).padStart(2, '0');
@@ -58,7 +56,7 @@ function processFoto(fotoBase64, nama, waktu, isManual) {
   if (waktu) base = base + '_' + String(waktu).replace('.', '');
   if (isManual) base = TAG_MANUAL_FILE + base;
 
-  return { ref: '[FILE] ' + base + '_' + stamp + '.' + ext, uploaded: false, url: '' };
+  return { ref: '[FILE] ' + base + '_' + stamp + '.' + ext };
 }
 
 function doPost(contents) {
@@ -80,6 +78,8 @@ function doPost(contents) {
   const fotoBase64 = String(data.fotoBase64 || '');
 
   if (!nama) return { status: 'error', message: 'Nama wajib diisi.' };
+  if (!nim) return { status: 'error', message: 'NIM wajib diisi.' };
+  if (!fotoBase64) return { status: 'error', message: 'Foto dokumentasi wajib diisi.' };
   if (waktu && !SHIFT_VALID.includes(waktu))
     return { status: 'error', message: 'Waktu piket tidak dikenal: ' + waktu };
   if (lokasi && !LOKASI_VALID.includes(lokasi))
@@ -108,7 +108,7 @@ function doPost(contents) {
     foto.ref,
   ]);
 
-  return { status: 'success', driveUrl: foto.url, refFoto: foto.ref, uploaded: foto.uploaded };
+  return { status: 'success', refFoto: foto.ref };
 }
 
 function pad2(n) {
@@ -179,9 +179,9 @@ const server = http.createServer((req, res) => {
   // Endpoint bantu: isi data contoh
   if (req.method === 'POST' && req.url.startsWith('/seed')) {
     const samples = [
-      { action: 'submitAttendance', namaMahasiswa: 'Ahmad Fauzi Rahman', nim: 'J0301211015', divisi: 'Divisi Unggas (Puyuh & Itik)', waktuPiket: '06.30', lokasi: 'Kandang Puyuh', status: 'Tepat Waktu', catatan: 'Pemberian pakan 12kg.', fotoBase64: '' },
-      { action: 'submitAttendance', namaMahasiswa: 'Siti Nurhaliza Azzahra', nim: 'J0301211042', divisi: 'Divisi Sanitasi & Kebersihan', waktuPiket: '12.00', lokasi: 'Kandang Itik', status: 'Terlambat', catatan: 'Sanasi kolam genangan.', fotoBase64: '' },
-      { action: 'submitManualAttendance', namaMahasiswa: 'Dewi Sartika Lestari', nim: 'J0301211102', divisi: 'Divisi Pakan & Nutrisi Ternak', waktuPiket: '16.00', lokasi: 'Penelitian', status: 'Izin', catatan: 'Dispensasi koordinator.', fotoBase64: '' },
+      { action: 'submitAttendance', namaMahasiswa: 'Ahmad Fauzi Rahman', nim: 'J0301211015', divisi: 'Divisi Unggas (Puyuh & Itik)', waktuPiket: '06.30', lokasi: 'Kandang Puyuh', status: 'Tepat Waktu', catatan: 'Pemberian pakan 12kg.', fotoBase64: 'data:image/jpeg;base64,SEED' },
+      { action: 'submitAttendance', namaMahasiswa: 'Siti Nurhaliza Azzahra', nim: 'J0301211042', divisi: 'Divisi Sanitasi & Kebersihan', waktuPiket: '12.00', lokasi: 'Kandang Itik', status: 'Terlambat', catatan: 'Sanasi kolam genangan.', fotoBase64: 'data:image/jpeg;base64,SEED' },
+      { action: 'submitManualAttendance', namaMahasiswa: 'Dewi Sartika Lestari', nim: 'J0301211102', divisi: 'Divisi Pakan & Nutrisi Ternak', waktuPiket: '16.00', lokasi: 'Penelitian', status: 'Izin', catatan: 'Dispensasi koordinator.', fotoBase64: 'data:image/jpeg;base64,SEED' },
     ];
     const results = samples.map((s) => doPost(JSON.stringify(s)));
     res.writeHead(200, { ...cors, 'Content-Type': 'application/json' });

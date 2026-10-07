@@ -359,7 +359,15 @@ const csvContent =
 // Submit Manual Record
   const handleCreateManual = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!manualName.trim() || isSavingManual) return;
+    if (isSavingManual) return;
+    if (!manualName.trim()) {
+      setManualError('Nama mahasiswa wajib diisi.');
+      return;
+    }
+    if (!manualNim.trim()) {
+      setManualError('NIM wajib diisi.');
+      return;
+    }
     setIsSavingManual(true);
     setManualError(null);
 
@@ -1153,10 +1161,12 @@ const csvContent =
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-fade-in">
             
-            <div className="px-5 py-4 bg-white border-b border-slate-300 flex items-center justify-between">
+<div className="px-5 py-4 bg-ipb-blue border-b-2 border-ipb-orange flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-base text-slate-900 ">Input Presensi Manual</h3>
-                <p className="text-[11px] text-slate-500 ">Untuk data susulan atau dispensasi piket</p>
+                <h3 className="font-bold text-base text-white">Input Presensi Manual</h3>
+                <p className="text-[11px] text-blue-100">
+                  Untuk data susulan atau dispensasi piket
+                </p>
               </div>
               <button
                 type="button"
@@ -1182,16 +1192,19 @@ const csvContent =
                 />
               </div>
 
-              <div>
+<div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                  NIM Mahasiswa
+                  NIM Mahasiswa <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
+                  required
+                  inputMode="numeric"
+                  autoComplete="off"
                   value={manualNim}
-                  onChange={(e) => setManualNim(e.target.value)}
-                  placeholder="Contoh: J0301221001"
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue"
+onChange={(e) => setManualNim(e.target.value)}
+                  placeholder="NIM sesuai Kartu Tanda Mahasiswa"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 font-mono focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue"
                 />
               </div>
 

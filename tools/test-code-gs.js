@@ -1,168 +1,282 @@
-﻿// Harness: menjalankan Code.gs dengan stub API Google Apps Script.
+// Harness: menjalankan Code.gs dengan stub API Google Apps Script.
+// Tidak ada stub DriveApp karena Code.gs sudah tidak memakai Drive sama sekali.
 global.SpreadsheetApp = {
   _ss: null,
-  getActiveSpreadsheet(){ if(!this._ss) throw new Error('getActiveSpreadsheet() mengembalikan null'); return this._ss; },
-  openById(id){ if(id==='TEST_ID') return this._ss; throw new Error('Spreadsheet tidak ditemukan: '+id); },
-};
-global.DriveApp = {
-  _folder: null,
-  getFolderById(id){
-    if(id!=='FOLDER_OK') throw new Error('Folder tidak ditemukan: '+id);
-    return { getName:()=>'Folder Lab TNK 61',
-      createFile(blob){ return { setSharing(){}, getUrl:()=>'https://drive.google.com/file/d/'+blob.n }; } };
+  // Apps Script sungguhan mengembalikan null untuk script yang tidak bound,
+  // bukan melempar error. Stub harus meniru itu supaya getSpreadsheet_()
+  // bisa menguji jalur error-nya sendiri.
+  getActiveSpreadsheet() {
+    return this._ss;
   },
-  Access:{ANYONE_WITH_LINK:'ANYONE_WITH_LINK'}, Permission:{VIEW:'VIEW'},
+  openById(id) {
+    if (id === 'ID-SPREADSHEET-DARI-PROPERTY') return this._ss;
+    throw new Error('Spreadsheet tidak ditemukan: ' + id);
+  },
+  getUi() {
+    return {
+      alert(m) {
+        console.log('=== POPUP testSetup ===');
+        console.log(m);
+        console.log('=== /POPUP ===');
+      },
+    };
+  },
 };
 global.Utilities = {
-  newBlob(b,m,n){ return {b,m,n}; },
-  base64Decode(s){ return s; },
-  formatDate(d,tz,f){ return 'WIB'; },
+  formatDate(d, tz, f) {
+    // stub sederhana: cukup menghasilkan 6 digit
+    return '001122';
+  },
 };
 global.ContentService = {
-  createTextOutput(s){ return { s, setMimeType(){ return this; } }; },
-  MimeType:{JSON:'application/json'},
+  createTextOutput(s) {
+    return { s, setMimeType() { return this; } };
+  },
+  MimeType: { JSON: 'application/json' },
 };
-global.Logger = { log(m){ console.log('LOG: '+m); } };
-global.SpreadsheetApp_getUi = ()=>({ alert(m){ console.log('=== POPUP ===\n'+m); } });
-SpreadsheetApp.getUi = ()=>({ alert(m){ console.log('=== POPUP ===\n'+m); } });
+global.PropertiesService = {
+  _p: { SPREADSHEET_ID: 'ID-SPREADSHEET-DARI-PROPERTY' },
+  getScriptProperties() {
+    const p = this._p;
+    return {
+      getProperty(k) { return Object.prototype.hasOwnProperty.call(p, k) ? p[k] : null; },
+    };
+  },
+};
+global.Logger = { log(m) { console.log('LOG: ' + m); } };
 
-// require Code.gs
-const fs=require('fs');
-const src=fs.readFileSync('Code.gs','utf8');
+const fs = require('fs');
+const src = fs.readFileSync('Code.gs', 'utf8');
 eval(src);
 
-// ---- Setup spreadsheet palsu ----
-function makeSheet(name, row1){
-  return {
-    _name:name, _v:[row1||[]],
-    getName(){return this._name;}, getId(){return 'SPREADSHEET_PALS';},
-    getLastRow(){return this._v.length;},
-    getRange(r,c,nr,nc){ const self=this; return {
-      getValues(){ const out=[]; for(let i=0;i<nr;i++){ const row=[]; for(let j=0;j<nc;j++) row.push(self._v[r-1+i]?.[c-1+j] ?? ''); out.push(row);} return out; },
-      setValues(v){ for(let i=0;i<nr;i++){ if(!self._v[r-1+i]) self._v[r-1+i]=[]; for(let j=0;j<nc;j++) self._v[r-1+i][c-1+j]=v[i][j]; } },
-    };},
-getDataRange(){ return this.getRange(1,1,this._v.length,HEADERS.length); },
-    setFrozenRows(){},
-    appendRow(row){ this._v.push(row.slice()); },
-    deleteRow(i){ this._v.splice(i-1,1); },
+function makeSheet(name, row1) {
+  const self = {
+    _name: name,
+    _v: [row1 || []],
+    getName() { return this._name; },
+    getId() { return 'SPREADSHEET_PALS'; },
+    getLastRow() { return this._v.length; },
+    getDataRange() { return this.getRange(1, 1, this._v.length, HEADERS.length); },
+    getRange(r, c, nr, nc) {
+      const s = self;
+      return {
+        getValues() {
+          const out = [];
+          for (let i = 0; i < nr; i++) {
+            const row = [];
+            for (let j = 0; j < nc; j++) row.push(s._v[r - 1 + i] ?.[c - 1 + j] ?? '');
+            out.push(row);
+          }
+          return out;
+        },
+        setValues(v) {
+          for (let i = 0; i < nr; i++) {
+            if (!s._v[r - 1 + i]) s._v[r - 1 + i] = [];
+            for (let j = 0; j < nc; j++) s._v[r - 1 + i][c - 1 + j] = v[i][j];
+          }
+        },
+      };
+    },
+    setFrozenRows() {},
+    appendRow(row) { this._v.push(row.slice()); },
+    deleteRow(i) { this._v.splice(i - 1, 1); },
   };
+  return self;
 }
+
 SpreadsheetApp._ss = {
-  getName(){return 'Data Absensi 61';}, getId(){return 'SPREADSHEET_PALS';},
-  getSheetByName(n){ return this._sheets?.[n] || null; },
-  insertSheet(n){ this._sheets=this._sheets||{}; this._sheets[n]=makeSheet(n,null); return this._sheets[n]; },
-  _sheets:{},
+  getName() { return 'Data Absensi 61'; },
+  getId() { return 'SPREADSHEET_PALS'; },
+  getSheetByName(n) { return this._sheets?.[n] || null; },
+  insertSheet(n) {
+    this._sheets = this._sheets || {};
+    this._sheets[n] = makeSheet(n, null);
+    return this._sheets[n];
+  },
+  _sheets: {},
 };
 
-const tests=[];
-function t(name, fn){ try{ fn(); tests.push('OK   '+name); }catch(e){ tests.push('FAIL '+name+' -> '+e.message); } }
+const tests = [];
+function t(name, fn) {
+  try { fn(); tests.push('OK   ' + name); }
+  catch (e) { tests.push('FAIL ' + name + ' -> ' + e.message); }
+}
+const post = (obj) => JSON.parse(doPost({ postData: { contents: JSON.stringify(obj) } }).s);
+const reset = () => { SpreadsheetApp._ss._sheets = {}; };
+const rows = () => SpreadsheetApp._ss._sheets['data_absen61']._v;
 
-// --- 1. testSetup dengan tab belum ada (harus buat otomatis) ---
-t('testSetup membuat tab + header otomatis', ()=>{
-  SpreadsheetApp._ss._sheets={};
+// ============ WAJIB: nama, NIM, foto ============
+t('doPost TOLAK nama kosong', () => {
+  reset();
+  const r = post({ nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/Nama/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK NIM kosong', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/NIM/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK foto kosong', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', fotoBase64: '' });
+  if (r.status !== 'error' || !/Foto/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK tanpa payload', () => {
+  const r = JSON.parse(doPost(null).s);
+  if (r.status !== 'error') throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK JSON rusak', () => {
+  const r = JSON.parse(doPost({ postData: { contents: '{rusak' } }).s);
+  if (r.status !== 'error') throw new Error(JSON.stringify(r));
+});
+
+// ============ validasi isi ============
+t('doPost TOLAK shift ngawur', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', waktuPiket: '99.99', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error') throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK lokasi ngawur', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', lokasi: 'Kandang Ayam', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error') throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK status manual ngawur', () => {
+  reset();
+  const r = post({ action: 'submitManualAttendance', namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', status: 'Ngawur', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error') throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK lokasi manual ngawur', () => {
+  reset();
+  const r = post({ action: 'submitManualAttendance', namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', lokasi: 'Kandang Ayam', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error') throw new Error(JSON.stringify(r));
+});
+
+// ============ referensi foto (TANPA Drive) ============
+t('mahasiswa: 9 kolom + ref tanpa awalan MANUAL_', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'Budi Santoso', nim: 'J0301211099', waktuPiket: '06.30', lokasi: 'Kandang Puyuh', status: 'Tepat Waktu', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'success') throw new Error(JSON.stringify(r));
+  const row = rows()[1];
+  if (row.length !== HEADERS.length) throw new Error('kolom=' + row.length);
+  if (!/^\[FILE\] Budi_Santoso_0630_\d{6}\.jpg$/.test(row[8])) throw new Error('ref: ' + row[8]);
+  if (/MANUAL_/.test(row[8])) throw new Error('mahasiswa tidak boleh MANUAL_');
+  if (!r.refFoto) throw new Error('respons tidak punya refFoto');
+});
+t('manual: [INPUT MANUAL] + awalan MANUAL_', () => {
+  reset();
+  const r = post({ action: 'submitManualAttendance', namaMahasiswa: 'Siti Nurhaliza', nim: 'J1', waktuPiket: '12.00', status: 'Izin', catatan: 'Dispensasi', fotoBase64: 'data:image/png;base64,BB' });
+  if (r.status !== 'success') throw new Error(JSON.stringify(r));
+  const row = rows()[1];
+  if (!/\[INPUT MANUAL\]/.test(row[7])) throw new Error('catatan: ' + row[7]);
+  if (!/^\[FILE\] MANUAL_Siti_Nurhaliza_1200_\d{6}\.png$/.test(row[8])) throw new Error('ref: ' + row[8]);
+});
+t('ext jpeg dinormalkan jadi jpg', () => {
+  reset();
+  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '16.00', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (!/\.jpg$/.test(rows()[1][8])) throw new Error('ext: ' + rows()[1][8]);
+});
+t('ext webp dipertahankan', () => {
+  reset();
+  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '16.00', fotoBase64: 'data:image/webp;base64,AA' });
+  if (!/\.webp$/.test(rows()[1][8])) throw new Error('ext: ' + rows()[1][8]);
+});
+t('nama dengan spasi jadi underscore, tanpa karakter aneh', () => {
+  reset();
+  post({ namaMahasiswa: "Ahmad '/' Fauzi#Rahman", nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,AA' });
+  const ref = rows()[1][8];
+  if (!/^\[FILE\] Ahmad_Fauzi_Rahman_/.test(ref)) throw new Error('ref: ' + ref);
+  if (/[^A-Za-z0-9_\[\]\. ]/.test(ref)) throw new Error('karakter terlarang: ' + ref);
+});
+t('nama kosong tidak bikin referensi rusak', () => {
+  reset();
+  post({ namaMahasiswa: '', nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,AA' });
+  // nama kosong sudah ditolak, tapi pastikan tidak melempar error
+});
+
+// ============ header & tab ============
+t('testSetup membuat tab + header otomatis', () => {
+  reset();
   testSetup();
-  const sh=SpreadsheetApp._ss._sheets['data_absen61'];
-  if(!sh) throw new Error('tab tidak dibuat');
-  const h=sh._v[0].join('|');
-  const want=HEADERS.join('|');
-  if(h!==want) throw new Error('header salah: '+h);
+  const sh = SpreadsheetApp._ss._sheets['data_absen61'];
+  if (!sh) throw new Error('tab tidak dibuat');
+  if (sh._v[0].join('|') !== HEADERS.join('|')) throw new Error('header salah');
+});
+t('header lama tidak ditimpa', () => {
+  reset();
+  SpreadsheetApp._ss._sheets['data_absen61'] = makeSheet('data_absen61', ['Data Lama', 'Budi', 'x', 'y', 'z']);
+  const sh = ensureSheet_();
+  if (sh._v[0][0] !== 'Data Lama') throw new Error('header ditimpa: ' + sh._v[0][0]);
 });
 
-// --- 2. doPost mahasiswa ---
-t('doPost mahasiswa -> 9 kolom + referensi file', ()=>{
-  SpreadsheetApp._ss._sheets={};
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({
-    action:'submitAttendance', namaMahasiswa:'Budi Santoso', nim:'J0301211099',
-    divisi:'Divisi Unggas', waktuPiket:'06.30', lokasi:'Kandang Puyuh',
-    status:'Tepat Waktu', catatan:'Pakan 12kg', fotoBase64:'data:image/jpeg;base64,AAAA'})}}).s);
-  if(out.status!=='success') throw new Error(out.message);
-  const sh=SpreadsheetApp._ss._sheets['data_absen61'];
-  const row=sh._v[1];
-  if(row.length!==9) throw new Error('kolom='+row.length);
-  if(!/^\[FILE\] Budi_Santoso_/.test(row[8])) throw new Error('ref: '+row[8]);
-  if(/MANUAL_/.test(row[8])) throw new Error('mahasiswa tidak boleh MANUAL_');
-  if(/INPUT MANUAL/.test(row[7])) throw new Error('mahasiswa tidak boleh tag manual');
+// ============ doGet ============
+t('doGet: terbaru di atas, refFoto + manual flag', () => {
+  reset();
+  post({ namaMahasiswa: 'Pertama', nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,AA' });
+  post({ action: 'submitManualAttendance', namaMahasiswa: 'Kedua', nim: 'J2', waktuPiket: '16.00', status: 'Tidak Hadir', fotoBase64: 'data:image/jpeg;base64,BB' });
+  const r = JSON.parse(doGet().s);
+  if (r.status !== 'success') throw new Error(JSON.stringify(r));
+  if (r.total !== 2) throw new Error('total=' + r.total);
+  if (r.data[0].nama !== 'Kedua') throw new Error('urutan: ' + r.data[0].nama);
+  if (r.data[0].manual !== true) throw new Error('manual flag salah');
+  if (r.data[1].manual !== false) throw new Error('manual flag salah (mahasiswa)');
+  if (!r.data[0].refFoto) throw new Error('refFoto hilang');
+  if (!/^\[FILE\] MANUAL_/.test(r.data[0].refFoto)) throw new Error('ref: ' + r.data[0].refFoto);
+});
+t('doGet: baris kosong dilewati', () => {
+  reset();
+  post({ namaMahasiswa: 'Satu', nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,AA' });
+  const sh = SpreadsheetApp._ss._sheets['data_absen61'];
+  sh._v.push([]); // baris kosong di tengah
+  const r = JSON.parse(doGet().s);
+  if (r.total !== 1) throw new Error('total=' + r.total);
 });
 
-// --- 3. doPost manual ---
-t('doPost manual -> [INPUT MANUAL] + MANUAL_ di ref', ()=>{
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({
-    action:'submitManualAttendance', namaMahasiswa:'Siti Nurhaliza', nim:'',
-    divisi:'Divisi Sanitasi', waktuPiket:'12.00', lokasi:'Penelitian',
-    status:'Izin', catatan:'Dispensasi', fotoBase64:'data:image/png;base64,BBBB'})}}).s);
-  if(out.status!=='success') throw new Error(out.message);
-  const sh=SpreadsheetApp._ss._sheets['data_absen61'];
-  const row=sh._v[sh._v.length-1];
-  if(!/\[INPUT MANUAL\]/.test(row[7])) throw new Error('catatan: '+row[7]);
-  if(!/^\[FILE\] MANUAL_Siti_Nurhaliza_/.test(row[8])) throw new Error('ref: '+row[8]);
-  if(!/\.png$/.test(row[8])) throw new Error('ext harus png: '+row[8]);
+// ============ tidak ada Drive sama sekali ============
+t('Code.gs tidak menyentuh Drive sama sekali', () => {
+  const src = fs.readFileSync('Code.gs', 'utf8');
+  const pCode = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+  ['DriveApp', 'FOLDER_ID', 'createFile', 'newBlob', 'base64Decode', 'setSharing'].forEach((token) => {
+    if (pCode.includes(token)) throw new Error('masih ada: ' + token);
+  });
 });
 
-// --- 4. validasi ---
-t('doPost tolak nama kosong', ()=>{
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({waktuPiket:'06.30',namaMahasiswa:''})}}).s);
-  if(out.status!=='error') throw new Error('harusnya error');
-});
-t('doPost tolak shift ngawur', ()=>{
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({namaMahasiswa:'X',waktuPiket:'99.99'})}}).s);
-  if(out.status!=='error') throw new Error('harusnya error');
-});
-t('doPost tolak lokasi ngawur', ()=>{
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({namaMahasiswa:'X',waktuPiket:'06.30',lokasi:'Kandang Ayam'})}}).s);
-  if(out.status!=='error') throw new Error('harusnya error');
-});
-t('doPost tolak status manual ngawur', ()=>{
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({action:'submitManualAttendance',namaMahasiswa:'X',waktuPiket:'06.30',status:'Ngawur'})}}).s);
-  if(out.status!=='error') throw new Error('harusnya error');
-});
-t('doPost tolak JSON rusak', ()=>{
-  const out=JSON.parse(doPost({postData:{contents:'{bukan json'}}).s);
-  if(out.status!=='error') throw new Error('harusnya error');
+// ============ tidak ada ID spreadsheet hardcoded ============
+// ID spreadsheet setengah rahasia: siapa pun yang punya ID itu bisa menulis ke
+// sheet, apalagi kalau sharing-nya "Siapa saja dengan link". Karena Code.gs
+// masuk repo publik, ID asli harusnya tidak pernah muncul sebagai literal.
+t('Code.gs tidak punya ID spreadsheet hardcoded', () => {
+  const src = fs.readFileSync('Code.gs', 'utf8');
+  const m = src.match(/var\s+SPREADSHEET_ID\s*=\s*'([^']*)'/);
+  if (!m) throw new Error('var SPREADSHEET_ID tidak ditemukan');
+  if (m[1].trim() !== '') throw new Error('SPREADSHEET_ID berisi nilai: ' + m[1]);
 });
 
-// --- 5. header existing tidak ditimpa ---
-t('header lama tidak ditimpa', ()=>{
-  SpreadsheetApp._ss._sheets={ 'data_absen61': makeSheet('data_absen61',['Data Lama','Budi','x','y','z']) };
-  const sh=ensureSheet_();
-  if(sh._v[0][0]!=='Data Lama') throw new Error('header ditimpa: '+sh._v[0][0]);
+t('getSpreadsheet_ baca ID dari Script Property', () => {
+  PropertiesService._p.SPREADSHEET_ID = 'ID-SPREADSHEET-DARI-PROPERTY';
+  const ss = getSpreadsheet_();
+  if (ss !== SpreadsheetApp._ss) throw new Error('tidak mengambil dari Script Property');
+  delete PropertiesService._p.SPREADSHEET_ID;
 });
 
-// --- 6. doGet ---
-t('doGet: terbaru di atas + kolom refFoto', ()=>{
-  SpreadsheetApp._ss._sheets={};
-  doPost({postData:{contents:JSON.stringify({namaMahasiswa:'Pertama',waktuPiket:'06.30',fotoBase64:''})}});
-  doPost({postData:{contents:JSON.stringify({action:'submitManualAttendance',namaMahasiswa:'Kedua',waktuPiket:'16.00',status:'Izin'})}});
-  const out=JSON.parse(doGet().s);
-  if(out.status!=='success') throw new Error(out.message);
-  if(out.data.length!==2) throw new Error('jumlah='+out.data.length);
-  if(out.data[0].nama!=='Kedua') throw new Error('urutan salah: '+out.data[0].nama);
-  if(out.data[0].manual!==true) throw new Error('flag manual salah');
-  if(out.data[1].manual!==false) throw new Error('flag manual salah (mahasiswa)');
-  if(typeof out.data[0].refFoto!=='string') throw new Error('refFoto hilang');
+t('getSpreadsheet_ jatuh ke bound kalau Property kosong', () => {
+  delete PropertiesService._p.SPREADSHEET_ID;
+  const ss = getSpreadsheet_();
+  if (ss !== SpreadsheetApp._ss) throw new Error('tidak jatuh ke bound');
 });
 
-// --- 7. Drive ---
-t('FOLDER_ID kosong -> upload dilewati, ref tetap ada', ()=>{
-  SpreadsheetApp._ss._sheets={};
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({namaMahasiswa:'TanpaDrive',waktuPiket:'06.30',fotoBase64:'data:image/jpeg;base64,AA'})}}).s);
-  if(out.uploaded!==false) throw new Error('uploaded harus false');
-  if(!out.refFoto) throw new Error('ref kosong padahal ada foto');
-});
-t('FOLDER_ID benar -> uploaded true', ()=>{
-  SpreadsheetApp._ss._sheets={};
-  const old=FOLDER_ID; FOLDER_ID='FOLDER_OK';
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({namaMahasiswa:'DenganDrive',waktuPiket:'06.30',fotoBase64:'data:image/jpeg;base64,AA'})}}).s);
-  FOLDER_ID=old;
-  if(out.uploaded!==true) throw new Error('uploaded='+out.uploaded);
-});
-t('FOLDER_ID salah -> tidak fatal, ref tetap ada', ()=>{
-  SpreadsheetApp._ss._sheets={};
-  const old=FOLDER_ID; FOLDER_ID='FOLDER_SALAH';
-  const out=JSON.parse(doPost({postData:{contents:JSON.stringify({namaMahasiswa:'DriveError',waktuPiket:'06.30',fotoBase64:'data:image/jpeg;base64,AA'})}}).s);
-  FOLDER_ID=old;
-  if(out.status!=='success') throw new Error('gagal total: '+out.message);
-  if(!out.refFoto) throw new Error('ref kosong');
+t('getSpreadsheet_ error jelas kalau bukan bound dan Property kosong', () => {
+  delete PropertiesService._p.SPREADSHEET_ID;
+  const saved = SpreadsheetApp._ss;
+  SpreadsheetApp._ss = null;
+  try {
+    getSpreadsheet_();
+    throw new Error('harusnya throw, tapi tidak');
+  } catch (e) {
+    if (!/Script Propert/i.test(e.message)) throw new Error('pesan kurang jelas: ' + e.message);
+  }
+  SpreadsheetApp._ss = saved;
 });
 
 console.log(tests.join('\n'));
-console.log('\n=== '+tests.length+' tes, '+tests.filter(x=>x.startsWith('FAIL')).length+' gagal ===');
+console.log('\n=== ' + tests.length + ' tes, ' + tests.filter(x => x.startsWith('FAIL')).length + ' gagal ===');

@@ -197,12 +197,16 @@ const stream = await navigator.mediaDevices.getUserMedia({
     e.preventDefault();
     setSubmitError(null);
 
-    if (!studentName.trim()) {
+if (!studentName.trim()) {
       setSubmitError('Harap masukkan nama lengkap Anda.');
       return;
     }
+    if (!studentNim.trim()) {
+      setSubmitError('NIM wajib diisi sesuai Kartu Tanda Mahasiswa.');
+      return;
+    }
     if (!photoDataUrl) {
-      setSubmitError('Foto dokumentasi wajib: ambil dari kamera atau unggah file.');
+      setSubmitError('Foto dokumentasi wajib: ambil langsung dari kamera.');
       return;
     }
     if (!shiftAvailability.isAvailable) {
@@ -322,8 +326,8 @@ const stream = await navigator.mediaDevices.getUserMedia({
               <div>
                 <span className="text-slate-500 block text-[11px]">Penyimpanan</span>
                 <span className="text-[11px] text-slate-600">
-                  {submittedRecord.syncedToDrive
-                    ? 'Tersinkron ke Google Sheets & Drive'
+{submittedRecord.syncedToDrive
+                    ? 'Tersimpan di Google Sheets angkatan'
                     : 'Tersimpan di perangkat ini'}
                 </span>
               </div>
@@ -335,8 +339,8 @@ const stream = await navigator.mediaDevices.getUserMedia({
             <div>
               <p className="font-bold text-blue-950">Catatan Penyimpanan Data</p>
               <p className="text-blue-800/90 mt-0.5">
-                {submittedRecord.syncedToDrive
-                  ? 'Data Anda sudah dikirim ke spreadsheet angkatan dan foto disimpan di Drive Laboratorium.'
+{submittedRecord.syncedToDrive
+                  ? 'Data Anda sudah dikirim ke spreadsheet angkatan. Foto tersimpan sebagai referensi nama file.'
                   : 'Backend spreadsheet belum terhubung, jadi data tersimpan di perangkat ini saja. Hubungi PC bila data tidak ditemukan admin.'}
               </p>
             </div>
@@ -424,22 +428,25 @@ const stream = await navigator.mediaDevices.getUserMedia({
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                NIM <span className="text-rose-500">*</span>
-              </label>
+<label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  NIM <span className="text-rose-500">*</span>
+                </label>
               <div className="relative">
                 <Hash className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
                 <input
                   type="text"
                   required
-                  value={studentNim}
+value={studentNim}
                   onChange={(e) => setStudentNim(e.target.value)}
                   placeholder="NIM sesuai Kartu Tanda Mahasiswa"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 min-h-[44px]"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 font-mono min-h-[44px]"
                 />
               </div>
               <p className="text-[10px] text-slate-500 mt-1">
-                Format resmi mahasiswa SV IPB (J030121...)
+                <span className="text-rose-500">*</span> Wajib. Format resmi mahasiswa SV
+                IPB (J030121...)
               </p>
             </div>
           </div>

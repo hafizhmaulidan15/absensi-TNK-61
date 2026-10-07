@@ -251,7 +251,7 @@ Layout: `lg:grid lg:grid-cols-12`. Sidebar `lg:col-span-3 xl:col-span-2` dan **s
 
 ## 6. Struktur Data
 
-### 6.1 Google Sheets — sheet `DataAbsen`
+### 6.1 Google Sheets — tab `data_absen61`
 
 Header baris 1 **wajib** ada:
 
@@ -265,7 +265,7 @@ Header baris 1 **wajib** ada:
 | F | Lokasi | `Kandang Puyuh` / `Kandang Itik` / `Penelitian` |
 | G | Status | `Tepat Waktu` / `Terlambat` / `Toleransi` |
 | H | Catatan | String |
-| I | URL Foto | String (URL Drive **atau** `[FILE] Nama_Timestamp.ext`) |
+| I | Referensi Foto | `[FILE] Nama_Shift_HHMMSS.ext` — foto manual berawalan `MANUAL_` |
 
 > ⚠️ Baris 1 dianggap header dan dilewati oleh `doGet`. Kalau baris 1 bukan header, baris pertama akan hilang saat dashboard membaca data.
 
@@ -331,19 +331,35 @@ Baris diurutkan **terbaru di atas** (`rows.reverse()`).
 **Konfigurasi wajib di baris atas:**
 
 ```js
-var FOLDER_ID = 'GANTI_DENGAN_ID_FOLDER_DRIVE_TNK_61';  // tanpa ?hl atau parameter lain
-var SHEET_NAME = 'DataAbsen';
+var FOLDER_ID = ' ';  // kosong = upload Drive dilewati, referensi tetap terisi
+var SHEET_NAME = 'data_absen61';
 ```
 
-### 7.1 Kenapa kolom URL Foto bisa berisi `[FILE] ...`
+### 7.1 Kenapa kolomnya bernama "Referensi Foto", bukan "URL"
 
-Google memblokir `DriveApp` untuk web app yang bisa diakses anonim. `doPost` mencoba upload, dan bila gagal tetap menulis baris dengan referensi nama file:
+Kolom ini **selalu** diisi referensi nama file, bukan link:
 
 ```
-[FILE] Nama_Mahasiswa_1791258229332.jpg
+[FILE] Budi_Santoso_0630_063412.jpg              <- mahasiswa
+[FILE] MANUAL_Siti_Nurhaliza_1200_071530.png    <- input manual admin
 ```
 
-Mahasiswa bisa mencari referensi ini untuk mencocokkan dengan foto di perangkatnya.
+Alasannya dua:
+
+1. **Google memblokir `DriveApp` untuk web app anonim.** Upload ke Drive
+   tidak bisa diandalkan, jadi link tidak boleh jadi satu-satunya bukti.
+   Kalau `FOLDER_ID` terisi, link tetap dikembalikan di respons, tapi yang
+   ditulis ke sheet tetap referensi nama file.
+2. **Referensi bisa dicocokkan.** Admin bisa mencari `Budi_Santoso_0630` di
+   folder foto dan mencocokkannya dengan device mahasiswa.
+
+Format nama file: `Nama_Shift_HHMMSS.ext`. Foto manual diberi awalan
+`MANUAL_` supaya tidak pernah tertukar dengan bukti mahasiswa — bukan hanya di
+sheet, tapi juga di badge **Manual** di dashboard yang membaca dua penanda
+sekaligus: `[INPUT MANUAL]` di Catatan dan `MANUAL_` di Referensi Foto.
+
+Kalau `FOLDER_ID` kosong, upload dilewati sepenuhnya dan Referensi Foto tetap
+terisi. Tidak ada data yang hilang.
 
 ---
 
@@ -363,17 +379,19 @@ npm run build
 npm start
 ```
 
-### 8.3 Yang WAJIB diganti sebelum dipakai
+### 8.3 Yang perlu diisi
 
-| Yang | Di mana | Ganti dengan |
+| Yang | Di mana | Status |
 | :--- | :--- | :--- |
-| `FOLDER_ID` | `Code.gs` | ID folder Drive milik angkatan 61 |
-| `GAS_WEBHOOK_URL` | `app/page.tsx` | URL `/exec` dari deployment terbaru lu (sekarang `''`) |
-| `NEXT_PUBLIC_ADMIN_PIN` | `.env.local` | PIN pilihan lu (sekarang `TNK61SVIPB`) |
+| `NEXT_PUBLIC_GAS_WEBHOOK_URL` | env (`.env.local` / panel hosting) | kosong — **wajib diisi** |
+| `NEXT_PUBLIC_ADMIN_PIN` | env | opsional, fallback `TNK61SVIPB` |
+| `FOLDER_ID` | `Code.gs` | opsional, dikosongkan → upload dilewati, referensi tetap terisi |
+| `SPREADSHEET_ID` | `Code.gs` | opsional, hanya untuk script standalone |
+| `SHEET_NAME` | `Code.gs` | **sudah disetel** ke `data_absen61` |
 
-> 🔴 `GAS_WEBHOOK_URL` wajib memakai URL deployment **terakhir**. URL lama tetap hidup dan akan menulis ke sheet lama.
+> 🔴 `NEXT_PUBLIC_GAS_WEBHOOK_URL` wajib memakai URL deployment **terakhir**. URL lama tetap hidup dan akan menulis ke sheet lama.
 >
-> 🔴 Selama `GAS_WEBHOOK_URL` kosong: submit mahasiswa hanya tersimpan di localStorage browser itu, input manual ditolak, dan panel admin menampilkan pesan bahwa backend belum terhubung.
+> 🔴 Selama env itu kosong: submit mahasiswa hanya tersimpan di localStorage browser itu, input manual ditolak, dan panel admin menampilkan pesan bahwa backend belum terhubung.
 
 ### 8.4 Publish ulang Apps Script
 

@@ -105,7 +105,7 @@ Tidak ada flag `NEXT_PUBLIC_UNLOCK_ALL` — mode testing dari proses TNK 62 tida
 ## Commit 3 — "Tambah backend Apps Script (Code.gs) dan template env"
 
 - `Code.gs` — `doPost` (termasuk `action: 'submitManualAttendance'` yang menambah akhiran `[INPUT MANUAL]` ke kolom Catatan), `doGet`, `testDriveAuth()`, `jsonResponse_()`
-- `Code.gs` — `FOLDER_ID` masih placeholder `GANTI_DENGAN_ID_FOLDER_DRIVE_TNK_61`; `SHEET_NAME = 'DataAbsen'`
+- `Code.gs` — `SHEET_NAME = 'data_absen61'` (sesuai nama tab spreadsheet angkatan 61); `FOLDER_ID` dan `SPREADSHEET_ID` sengaja dikosongkan karena keduanya opsional
 - `Code.gs` — nama file foto dihitung sekali di luar blok `try` agar fallback `[FILE] ...` memakai nama yang sama dengan file yang akan diunggah
 - `.env.example` — dokumentasi `NEXT_PUBLIC_ADMIN_PIN`
 
@@ -241,7 +241,7 @@ Keduanya menandai dengan jelas bahwa backend **belum disambung**, dan mencatat b
 
 Backend TNK 61 belum ada. Supaya aplikasi benar-benar berfungsi:
 
-1. Buat Google Spreadsheet dengan tab `DataAbsen`, **9 kolom** (header persis seperti §6.1 di `SPESIFIKASI_FUNGSI.md`)
+1. Buat Google Spreadsheet dengan tab `data_absen61`, **9 kolom** (header persis seperti §6.1 di `SPESIFIKASI_FUNGSI.md`)
 2. Tempel `Code.gs` ke Apps Script spreadsheet tersebut
 3. Ganti `FOLDER_ID` di `Code.gs` dengan ID folder Drive angkatan 61
 4. Jalankan `testDriveAuth()` sekali dari editor
@@ -249,7 +249,128 @@ Backend TNK 61 belum ada. Supaya aplikasi benar-benar berfungsi:
 6. Tempel URL `/exec` ke `GAS_WEBHOOK_URL` di `app/page.tsx`
 7. Deploy ke hosting HTTPS, lalu tes kamera dan submit end-to-end
 
-## Commit 8 — "Perbaiki pemasangan stream kamera; KPI 100% tanpa data jadi tanda hubung"
+## Commit 8 — "Code.gs: tab data_absen61, validasi ketat, testSetup, dan reference foto MANUAL_"
+
+### `Code.gs` ditulis ulang supaya benar-benar bisa dipakai
+
+**Nama tab disetel ke `data_absen61`**, mengikuti nama spreadsheet angkatan 61.
+
+**`SPREADSHEET_ID` baru.** Script bisa dibuka dua cara:
+
+| Cara | Cara kerja | `SPREADSHEET_ID` |
+| :--- | :--- | :--- |
+| Bound | Dari spreadsheet: Extensions > Apps Script | kosong (otomatis) |
+| Standalone | Script terpisah, milik sendiri | isi ID-nya |
+
+Sebelum ini `getActiveSpreadsheet()` dipanggil tanpaoji: kalau script-nya
+standalone, fungsi itu mengembalikan `null` dan hasilnya `TypeError` yang
+membingungkan. Sekarang `getSpreadsheet_()` mencoba `SPREADSHEET_ID` dulu,
+lalu jatuh ke `getActiveSpreadsheet()`, dan kalau dua-duanya gagal memberi
+pesan yang menyebut cara memperbaikinya.
+
+**`ensureSheet_()` tidak lagi menimpa data.** Sebelumnya header ditulis
+selalu di baris 1 — kalau tab sudah berisi data, baris pertama bisa hilang.
+Sekarang header hanya ditulis kalau baris 1 kosong seluruhnya. Kalau baris 1
+sudah berisi sesuatu, header dilewati dan pesan dicatat di Execution log.
+
+**ValidasidoGet diperketat:** nama wajib, shift harus salah satu dari tiga
+nilai yang valid, lokasi harus salah satu dari tiga unit, dan status untuk
+input manual harus salah satu dari lima status yang diizinkan. Sebelumnya
+nilai ngawur diam-diam tersimpan ke sheet.
+
+**Kolom 9 diganti nama** dari "URL Foto" jadi **"Referensi Foto"**, karena isinya
+memang referensi nama file, bukan link.
+
+### Referensi foto dibedakan untuk data manual
+
+```
+[FILE] Budi_Santoso_0630_063412.jpg              <- mahasiswa
+[FILE] MANUAL_Siti_Nurhaliza_1200_071530.png    <- input manual admin
+```
+
+Format nama file `Nama_Shift_HHMMSS.ext`. Foto manual dapat awalan `MANUAL_`
+sehingga tidak mungkin tertukar dengan bukti mahasiswa.
+
+`processFoto()` sekarang selalu mengembalikan referensi,/upload akan
+dilewati, dan kegagalan upload **tidak lagi menggagalkan pencatatan
+presensi** — data tetap masuk sheet dengan Referensi Foto terisi.
+
+Di sisi dashboard, `isManualRecord()` membaca **dua** penanda sekaligus
+(`[INPUT MANUAL]` di Catatan dan `MANUAL_` di Referensi Foto), dan badge
+sekarang oranye dengan border supaya jelas bedanya dari badge status biasa.
+
+### `testSetup()` menggantikan `testDriveAuth()`
+
+Fungsi lama hanya mengecek Drive dan langsung gagal kalau `FOLDER_ID` belum
+diisi. Sekarang `testSetup()` memeriksa satu per satu dan menampilkan pop-up
+berisi:
+
+- Spreadsheet ketemu atau tidak (beserta mode bound/standalone dan ID-nya)
+- Tab `data_absen61` ada atau tidak
+- Header 9 kolom, satu per satu, dengan tanda OK atau PERIKSA
+- Folder Drive bisa diakses atau tidak (opsional)
+
+Pesan错误 juga ditulis dalam bahasa Indonesia, bukan error bahasa Inggris
+mentah.
+
+### Status manual baru
+
+Ditambah dua status yang hanya bisa dipilih admin: **`Izin`** (izin/dispensasi)
+dan **`Tidak Hadir`**. Ketiga status lama tetap ada. Warna badge dibedakan
+per status, dan `statusBadgeClass()`dipisah jadi fungsi sendiri supaya tabel
+tidak lagi punya bertingkat-bertingkat kondisi inline.
+
+---
+
+## Commit 9 — "Environment variable untuk backend, mock server, dan 13 tes Code.gs"
+
+### Backend pindah ke environment variable
+
+`GAS_WEBHOOK_URL` yang tadinya konstanta hardcoded di `app/page.tsx:19`
+sekarang dibaca dari `process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL`, dengan default
+string kosong supaya repo tetap jalan tanpa backend apa pun.
+
+Konsekuensinya: **tidak ada lagi kode yang perlu diedit** saat ganti
+deployment. Tinggal set env var di `.env.local` atau panel hosting.
+
+### Bug: baris manual tidak muncul sampai refresh
+
+`rows` memakai `sheetRecords` selama isinya tidak kosong, dan `sheetRecords`
+hanya terisi dari `loadFromSheet()`. Record manual langsung masuk ke
+`records` (localStorage), jadi tidak pernah terlihat sampai user menekan
+Segarkan atau reload.
+
+Perbaikan: `handleCreateManual` memanggil `loadFromSheet()` setelah POST
+berhasil. Kegagalan refresh tidak membatalkan penyimpanan.
+
+Ditemukan lewat tes end-to-end terhadap mock server, bukan dari baca kode.
+
+### `tools/mock-gas.js` — backend lokal
+
+Server Node yang meniru kontrak `Code.gs` persis: validasi yang sama, tag
+`[INPUT MANUAL]`, awalan `MANUAL_`, urutan terbaru-di-atas. Dipakai
+mengembangkan frontend tanpa menunggu Google. Endpoint bantu: `POST /seed`
+isi 3 data contoh, `POST /reset` kosongkan.
+
+### `tools/test-code-gs.js` — 13 tes tanpa Google
+
+Menjalankan `Code.gs` asli di Node dengan stub API Apps Script. Ini menangkap
+bug yang tidak akan terlihat dari baca kode saja, termasuk `getDataRange` yang
+tidak ada di stub — artinya implementasi `doGet` diuji sampai tuntas.
+
+```bash
+npm run test:gas   # 13 tes, 0 gagal
+```
+
+### Comment `#` diubah jadi `//`
+
+Komentar bergaya `#` valid di Apps Script tapi tidak di Node, sehingga
+`Code.gs` tidak bisa di-sintaks-check. Semua `#` diubah jadi `//` supaya
+file yang sama bisa diverifikasi di kedua runtime.
+
+---
+
+## Commit 10 — "Seragamkan font, panel admin jadi sidebar terang, dan bersihkan dead code"
 
 ### Bug: stream kamera tidak pernah menempel ke `<video>`
 
