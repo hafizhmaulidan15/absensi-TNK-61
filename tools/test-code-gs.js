@@ -8,8 +8,11 @@ global.SpreadsheetApp = {
   getActiveSpreadsheet() {
     return this._ss;
   },
+  // ID yang diterima diuji. Dipakai untuk memastikan resolution-nya benar:
+  // Script Property harus menang atas variabel di kode.
+  _knownIds: [],
   openById(id) {
-    if (id === 'ID-SPREADSHEET-DARI-PROPERTY') return this._ss;
+    if (this._knownIds.indexOf(id) !== -1) return this._ss;
     throw new Error('Spreadsheet tidak ditemukan: ' + id);
   },
   getUi() {
@@ -35,7 +38,7 @@ global.ContentService = {
   MimeType: { JSON: 'application/json' },
 };
 global.PropertiesService = {
-  _p: { SPREADSHEET_ID: 'ID-SPREADSHEET-DARI-PROPERTY' },
+  _p: {},
   getScriptProperties() {
     const p = this._p;
     return {
@@ -48,6 +51,12 @@ global.Logger = { log(m) { console.log('LOG: ' + m); } };
 const fs = require('fs');
 const src = fs.readFileSync('Code.gs', 'utf8');
 eval(src);
+
+// Daftarkan ID dari kode sebagai spreadsheet yang "ada", supaya openById
+// berhasil di semua tes. Tanpa ini setiap tes yang memanggil doPost akan
+// gagal dengan "Spreadsheet tidak ditemukan" sebelum masuk ke logika yang
+// sebenarnya diuji.
+SpreadsheetApp._knownIds.push(String(SPREADSHEET_ID).trim());
 
 function makeSheet(name, row1) {
   const self = {
@@ -279,41 +288,44 @@ t('Code.gs tidak menyentuh Drive sama sekali', () => {
   });
 });
 
-// ============ tidak ada ID spreadsheet hardcoded ============
-// ID spreadsheet setengah rahasia: siapa pun yang punya ID itu bisa menulis ke
-// sheet, apalagi kalau sharing-nya "Siapa saja dengan link". Karena Code.gs
-// masuk repo publik, ID asli harusnya tidak pernah muncul sebagai literal.
-t('Code.gs tidak punya ID spreadsheet hardcoded', () => {
-  const src = fs.readFileSync('Code.gs', 'utf8');
-  const m = src.match(/var\s+SPREADSHEET_ID\s*=\s*'([^']*)'/);
-  if (!m) throw new Error('var SPREADSHEET_ID tidak ditemukan');
-  if (m[1].trim() !== '') throw new Error('SPREADSHEET_ID berisi nilai: ' + m[1]);
+// ============ resolution spreadsheet ============
+//
+// Urutan di getSpreadsheet_(): Script Property > SPREADSHEET_ID di kode >
+// bound. Tes ini mengunci urutan itu, karena salah urutan berarti script
+// diam-diam menulis ke spreadsheet yang salah.
+t('SPREADSHEET_ID di kode terisi', () => {
+  const isi = String(SPREADSHEET_ID).trim();
+  if (isi === '') throw new Error('SPREADSHEET_ID kosong di kode');
+  if (!/^[A-Za-z0-9_-]{20,}$/.test(isi)) throw new Error('format ID aneh: ' + isi);
 });
 
-t('getSpreadsheet_ baca ID dari Script Property', () => {
-  PropertiesService._p.SPREADSHEET_ID = 'ID-SPREADSHEET-DARI-PROPERTY';
+t('Script Property menang atas variabel di kode', () => {
+  PropertiesService._p.SPREADSHEET_ID = 'ID-DARI-PROPERTY';
+  SpreadsheetApp._knownIds.push('ID-DARI-PROPERTY');
+  // Kalau urutan terbalik, openById akan dapat ID kode dan gagal.
   const ss = getSpreadsheet_();
   if (ss !== SpreadsheetApp._ss) throw new Error('tidak mengambil dari Script Property');
   delete PropertiesService._p.SPREADSHEET_ID;
 });
 
-t('getSpreadsheet_ jatuh ke bound kalau Property kosong', () => {
+t('tanpa Property, pakai SPREADSHEET_ID di kode', () => {
   delete PropertiesService._p.SPREADSHEET_ID;
   const ss = getSpreadsheet_();
-  if (ss !== SpreadsheetApp._ss) throw new Error('tidak jatuh ke bound');
+  if (ss !== SpreadsheetApp._ss) throw new Error('tidak memakai SPREADSHEET_ID di kode');
 });
 
-t('getSpreadsheet_ error jelas kalau bukan bound dan Property kosong', () => {
+t('kalau ID salah, errornya menyebut cara memperbaikinya', () => {
   delete PropertiesService._p.SPREADSHEET_ID;
-  const saved = SpreadsheetApp._ss;
-  SpreadsheetApp._ss = null;
+  const known = SpreadsheetApp._knownIds.slice();
+  SpreadsheetApp._knownIds.length = 0;
   try {
     getSpreadsheet_();
     throw new Error('harusnya throw, tapi tidak');
   } catch (e) {
-    if (!/Script Propert/i.test(e.message)) throw new Error('pesan kurang jelas: ' + e.message);
+    if (!/SPREADSHEET_ID/.test(e.message)) throw new Error('pesan kurang jelas: ' + e.message);
+  } finally {
+    SpreadsheetApp._knownIds.push(...known);
   }
-  SpreadsheetApp._ss = saved;
 });
 
 console.log(tests.join('\n'));

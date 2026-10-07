@@ -90,11 +90,15 @@ otomatis tahu spreadsheet mana. Tapi kalau script-nya berdiri sendiri:
 - nama: `SPREADSHEET_ID`
 - nilai: ID dari URL `https://docs.google.com/spreadsheets/d/<ID>/edit`
 
-**Kenapa lewat Script Properties dan bukan ditulis di `Code.gs`?** ID spreadsheet
-setengah rahasia. Kalau sharing-nya "Siapa saja dengan link", siapa pun yang punya
-ID itu bisa menulis ke sheet. Karena `Code.gs` masuk repo publik, ID-nya tidak
-boleh ikut. Ada tes otomatis yang gagal kalau `SPREADSHEET_ID` diisi literal di
-kode.
+**ID-nya sudah terisi di `Code.gs`.** Kalau spreadsheet lu diganti, edit
+`var SPREADSHEET_ID` di bagian KONFIGURASI atas, atau isi Script Property dengan
+nama yang sama — Script Property dibaca lebih dulu, jadi tidak perlu edit kode.
+
+> Catatan: karena `Code.gs` ini ada di repo publik, ID spreadsheet lu ikut
+> terpublikasi di situ. ID spreadsheet bukan rahasia seperti password, tapi
+> selama sharing spreadsheet lu tidak "Siapa saja dengan link", orang tetap
+> butuh login dan izin untuk membukanya. Kalau nanti sharing-nya dilepas ke
+> publik, pindahkan ID-nya ke Script Property dan kosongkan variabel di kode.
 
 **Langkah 5 — deploy**
 
