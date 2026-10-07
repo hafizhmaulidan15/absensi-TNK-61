@@ -15,10 +15,17 @@ const STORAGE_KEY = 'tnk61_attendance_records_v1';
 
 // URL /exec dari deployment Apps Script milik angkatan 61.
 //
-// Default ini kosong supaya repo ini bisa dipakai tanpa backend apa pun.
-// Untuk produksi, set lewat environment variable di host (Vercel/hosting lain):
-//   GAS_WEBHOOK_URL=https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec
-// Env selalu menang, jadi kode tidak perlu diedit saat ganti deployment.
+// Prefix NEXT_PUBLIC_ itu penting: Next.js menyalin nilainya ke JS yang
+// dikirim ke browser SAAT BUILD, bukan saat runtime. Jadi kalau URL-nya kosong,
+// itu karena env belum ada waktu `npm run build` / `next build` di host.
+// Mengganti env lalu cuma reload halaman tidak akan cukup — harus build ulang.
+//
+// Default di kode sengaja kosong supaya repo ini tetap jalan tanpa backend:
+// data mahasiswa jatuh ke localStorage browser, panel admin memakai data lokal.
+//
+// Untuk produksi, set di panel host (Vercel > Settings > Environment Variables):
+//   NEXT_PUBLIC_GAS_WEBHOOK_URL = https://script.google.com/macros/s/<ID>/exec
+// Env selalu menang atas nilai di sini, jadi ganti deployment cukup ganti env.
 const GAS_WEBHOOK_URL = process.env.NEXT_PUBLIC_GAS_WEBHOOK_URL ?? '';
 
 const emptySubscribe = () => () => {};

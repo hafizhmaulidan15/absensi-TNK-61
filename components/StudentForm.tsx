@@ -441,7 +441,7 @@ value={studentNim}
                   placeholder="NIM sesuai Kartu Tanda Mahasiswa"
                   inputMode="numeric"
                   autoComplete="off"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 font-mono min-h-[44px]"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 placeholder:text-slate-500 placeholder:font-sans tabular-nums min-h-[44px]"
                 />
               </div>
               <p className="text-[10px] text-slate-500 mt-1">

@@ -25,6 +25,7 @@ import {
   AlertCircle,
   X,
   ExternalLink,
+  Database,
 } from 'lucide-react';
 
 const LOCATIONS: UnitLocation[] = ['Kandang Puyuh', 'Kandang Itik', 'Penelitian'];
@@ -141,6 +142,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [sheetRecords, setSheetRecords] = useState<AttendanceRecord[]>([]);
   const [isLoadingSheet, setIsLoadingSheet] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
+  // true = env NEXT_PUBLIC_GAS_WEBHOOK_URL belum diisi di build ini.
+  // Dipisah dari sheetError karena ini kondisi setup, bukan kegagalan request,
+  // jadi tidak perlu moan di UI — cukup tandai di titik status.
+  const [isSheetNotConfigured, setIsSheetNotConfigured] = useState(false);
 
   // Sumber data: spreadsheet (utama), localStorage sebagai cadangan
   const rows = sheetRecords.length > 0 ? sheetRecords : records;
@@ -148,11 +153,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const loadFromSheet = useCallback(async () => {
     if (!gasWebhookUrl) {
       setSheetRecords([]);
-      setSheetError(
-        'URL /exec Apps Script belum diisi. Set NEXT_PUBLIC_GAS_WEBHOOK_URL di environment variable, lalu klik Segarkan.'
-      );
+      setSheetError(null);
+      setIsSheetNotConfigured(true);
       return;
     }
+    setIsSheetNotConfigured(false);
     setIsLoadingSheet(true);
     setSheetError(null);
     try {
@@ -746,8 +751,8 @@ const csvContent =
               className={`w-2 h-2 rounded-full ${
                 isLoadingSheet
                   ? 'bg-amber-500 animate-pulse'
-                  : sheetError
-                    ? 'bg-rose-500'
+                  : sheetError || isSheetNotConfigured
+                    ? 'bg-amber-500'
                     : 'bg-emerald-500'
               }`}
             />
@@ -756,7 +761,9 @@ const csvContent =
                 ? 'Memuat data dari spreadsheet...'
                 : sheetError
                   ? sheetError
-                  : `Sumber data: Google Spreadsheet (${sheetRecords.length} baris)`}
+                  : isSheetNotConfigured
+                    ? 'Sumber data: local (spreadsheet belum terhubung)'
+                    : `Sumber data: Google Spreadsheet (${sheetRecords.length} baris)`}
             </span>
           </div>
           <button
@@ -886,21 +893,37 @@ const csvContent =
           </div>
 
           <span className="text-[10px] text-slate-500 shrink-0">
-            {sheetError ? 'sumber: local' : `sumber: sheet (${sheetRecords.length})`}
+            {sheetError || isSheetNotConfigured ? 'sumber: local' : `sumber: sheet (${sheetRecords.length})`}
           </span>
         </div>
 
         {filteredRecords.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-white border border-slate-300 text-slate-500 flex items-center justify-center mx-auto">
-              <Search className="w-6 h-6" />
-            </div>
-            <div className="text-sm font-semibold text-slate-800 ">
-              Tidak ada baris yang cocok
-            </div>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Ubah filter tanggal atau kata kunci pencarian nama mahasiswa.
-            </p>
+            {rows.length === 0 ? (
+              // Belum ada data sama sekali, jadi ini bukan soal filter.
+              <>
+                <div className="w-12 h-12 rounded-full bg-white border border-slate-300 text-slate-500 flex items-center justify-center mx-auto">
+                  <Database className="w-6 h-6" />
+                </div>
+                <div className="text-sm font-semibold text-slate-800">Belum ada data presensi</div>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  {isSheetNotConfigured
+                    ? 'Spreadsheet belum terhubung, jadi tabel masih kosong. Data mahasiswa yang terkirim tetap tersimpan di perangkat masing-masing.'
+                    : 'Belum ada mahasiswa yang mengirim presensi. Baris akan muncul di sini begitu presensi pertama masuk, atau setelah lu isi lewat Input Manual.'}
+                </p>
+              </>
+            ) : (
+              // Data ada tapi filter yang menyembunyikan.
+              <>
+                <div className="w-12 h-12 rounded-full bg-white border border-slate-300 text-slate-500 flex items-center justify-center mx-auto">
+                  <Search className="w-6 h-6" />
+                </div>
+                <div className="text-sm font-semibold text-slate-800">Tidak ada baris yang cocok</div>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Ubah filter tanggal atau kata kunci pencarian nama mahasiswa.
+                </p>
+              </>
+            )}
           </div>
         ) : (
 <div className="overflow-x-auto">
@@ -1180,15 +1203,15 @@ const csvContent =
             <form onSubmit={handleCreateManual} className="p-6 space-y-4 text-xs sm:text-sm text-slate-200">
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                  Nama Mahasiswa
+                  Nama Mahasiswa <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={manualName}
                   onChange={(e) => setManualName(e.target.value)}
-                  placeholder="Nama Lengkap..."
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue"
+                  placeholder="Nama lengkap sesuai Kartu Tanda Mahasiswa"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-500 placeholder:font-sans focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue"
                 />
               </div>
 
@@ -1204,7 +1227,7 @@ const csvContent =
                   value={manualNim}
 onChange={(e) => setManualNim(e.target.value)}
                   placeholder="NIM sesuai Kartu Tanda Mahasiswa"
-                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 font-mono focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue"
+                  className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-slate-900 placeholder:text-slate-500 placeholder:font-sans tabular-nums focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue"
                 />
               </div>
 
