@@ -117,15 +117,11 @@ gasWebhookUrl,
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error('Fitur kamera tidak didukung pada browser ini.');
         }
-        const stream = await navigator.mediaDevices.getUserMedia({
+const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
         mediaStreamRef.current = stream;
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play();
-        }
         setIsCameraActive(true);
       } catch {
         setCameraError(
@@ -136,6 +132,25 @@ gasWebhookUrl,
     },
     [stopCamera]
   );
+
+// Pasang stream ke elemen <video>.
+  // Wajib lewat useEffect, bukan langsung di startCamera: pada frame pertama
+  // isCameraActive masih false sehingga <video> belum ada di DOM, jadi
+  // videoRef.current bernilai null dan stream tidak pernah menempel.
+  useEffect(() => {
+    if (!isCameraActive || !mediaStreamRef.current) return;
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.srcObject !== mediaStreamRef.current) {
+      video.srcObject = mediaStreamRef.current;
+    }
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // Beberapa browser menolak autoplay; user tetap bisa tombol Ambil Foto.
+      });
+    }
+  }, [isCameraActive]);
 
   const switchCameraFacing = () => {
     const nextFacing = cameraFacing === 'environment' ? 'user' : 'environment';

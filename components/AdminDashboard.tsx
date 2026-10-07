@@ -223,7 +223,8 @@ const [manualNim, setManualNim] = useState('');
     const total = rows.length;
     const todayCount = rows.filter((r) => r.formattedDate === formatWIBDate(new Date())).length;
     const tepatWaktuCount = rows.filter((r) => r.status === 'Tepat Waktu').length;
-    const tepatWaktuPct = total > 0 ? Math.round((tepatWaktuCount / total) * 100) : 100;
+    // Tanpa data, tampilkan "—" supaya tidak terlihat seperti accomplishments 100%
+    const tepatWaktuPct = total > 0 ? Math.round((tepatWaktuCount / total) * 100) : null;
 
 const pagi = rows.filter((r) => r.shift === '06.30').length;
     const siang = rows.filter((r) => r.shift === '12.00').length;
@@ -527,11 +528,13 @@ const csvContent =
             <span>Tingkat Ketepatan Waktu</span>
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="mt-2 text-2xl sm:text-3xl font-black text-emerald-600 font-mono tabular-nums">
-            {stats.tepatWaktuPct}%
+<div className="mt-2 text-2xl sm:text-3xl font-black text-emerald-600 font-mono tabular-nums">
+            {stats.tepatWaktuPct === null ? '—' : `${stats.tepatWaktuPct}%`}
           </div>
           <div className="mt-1 text-slate-500 text-[11px]">
-            Tepat dalam toleransi shift
+            {stats.tepatWaktuPct === null
+              ? 'Belum ada data untuk dihitung'
+              : 'Tepat dalam toleransi shift'}
           </div>
         </div>
 

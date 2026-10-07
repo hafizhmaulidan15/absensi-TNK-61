@@ -249,6 +249,26 @@ Backend TNK 61 belum ada. Supaya aplikasi benar-benar berfungsi:
 6. Tempel URL `/exec` ke `GAS_WEBHOOK_URL` di `app/page.tsx`
 7. Deploy ke hosting HTTPS, lalu tes kamera dan submit end-to-end
 
+## Commit 8 — "Perbaiki pemasangan stream kamera; KPI 100% tanpa data jadi tanda hubung"
+
+### Bug: stream kamera tidak pernah menempel ke `<video>`
+
+Gejala: elemen `<video>` ada di DOM, tapi `srcObject` null, `readyState` 0, `videoWidth` 0 — kamera terlihat mati padahal `getUserMedia` berhasil dan tidak ada pesan error.
+
+Penyebabnya urutan render:
+
+1. `isCameraActive` masih `false`, jadi `<video>` **belum dirender** (yang tampil placeholder).
+2. `startCamera()` dapat stream, lalu langsung mencoba `videoRef.current.srcObject = stream` — tapi `videoRef.current` masih `null` karena elemennya belum ada.
+3. `setIsCameraActive(true)` baru subsequently merender `<video>`, yang sekarang **tidak pernah menerima stream** — `srcObject` tetap null selamanya.
+
+Perbaikan: pemasangan stream dipindah ke `useEffect` yang bergantung pada `[isCameraActive]`, jadi dijamin berjalan setelah `<video>` benar-benar ada di DOM. `play()` dipanggil di sana juga, dengan `.catch()` untuk autoplay yang ditolak browser.
+
+### KPI ketepatan waktu
+
+`tepatWaktuPct` sebelumnya `100` saat `total === 0`, jadi dashboard kosong memamerkan "100%" hijau seolah prestasi. Sekarang `null` dan dirender sebagai "—" dengan keterangan "Belum ada data untuk dihitung".
+
+---
+
 ## Verifikasi yang Sudah Dijalankan
 
 | Perintah | Hasil |
@@ -256,4 +276,46 @@ Backend TNK 61 belum ada. Supaya aplikasi benar-benar berfungsi:
 | `npm run lint` | Lolos, tanpa error |
 | `npm run build` | Lolos, 5/5 halaman static, TypeScript strict aktif |
 
-Tes kamera dan submit end-to-end **belum** bisa diverifikasi dari sini: butuh browser (Playwright/Chromium) dan backend aktif. `getUserMedia` juga butuh HTTPS atau `localhost`.
+### Tes browser (Playwright + Chromium headless, kamera sintetis)
+
+Dijalankan terhadap dev server `localhost:3000`.
+
+**Layout 1440×900**
+
+| Uji | Hasil |
+| :--- | :--- |
+| Grid 12 kolom aktif | 12 × 72px |
+| Kolom kiri sticky | `position: sticky`, `top: 96px`, lebar 384px |
+| Horizontal overflow | 0 px |
+| Kamera live | `srcObject` ada, `readyState` 4, 1280×720, `paused: false` |
+| Snapshot | preview data URL 34 KB |
+
+**Alur form (390×844)**
+
+| Uji | Hasil |
+| :--- | :--- |
+| Saran nama | Mengisi nama + NIM sekaligus |
+| Ganti lokasi | Kartu di kolom kiri menyorot (`border-ipb-orange`) |
+| Ganti divisi | Dropdown berubah |
+| Ambil foto kamera | Preview data:image/jpeg 31–35 KB |
+| Unggah file | Preview data:image/jpeg 4 KB, jadi JPEG bukan PNG mentah — watermark terpasang |
+| Ambil ulang | Kembali ke live preview, `readyState` 4 |
+| Submit di luar jam shift | Tombol nonaktif |
+| Modal SOP | "15 menit", "PC Riswidaressi", "sv.ipb.ac.id" semua muncul |
+
+**Panel admin**
+
+| Uji | Hasil |
+| :--- | :--- |
+| PIN salah | Ditolak |
+| PIN benar (`TNK61SVIPB`) | Dashboard terbuka |
+| Banner `GAS_WEBHOOK_URL` kosong | Tampil, jujur |
+| KPI tanpa data | "—" bukan 100% |
+
+**Lintas halaman**: 0 console error, 0 request ≥ 400, di kedua viewport.
+
+### Yang belum terverifikasi
+
+- Submit end-to-end ke spreadsheet (butuh backend aktif)
+- Kamera di perangkat asli (hanya kamera sintetis Chromium di sini)
+- Tampilan di iOS Safari dan Android Chrome langsung (hanya Chromium)
