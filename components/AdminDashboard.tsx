@@ -1,7 +1,12 @@
 'use client';
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { AttendanceRecord, PiketShift, UnitLocation } from '@/types/attendance';
+import {
+  AttendanceRecord,
+  PiketShift,
+  UnitLocation,
+  PiketDivision,
+} from '@/types/attendance';
 import { formatWIBDate, formatWIBTime } from '@/lib/timeUtils';
 import {
   ShieldCheck,
@@ -13,7 +18,7 @@ import {
   Trash2,
   Eye,
   CheckCircle,
-Clock,
+  Clock,
   Filter,
   Camera,
   RefreshCw,
@@ -22,6 +27,17 @@ Clock,
   X,
   ExternalLink,
 } from 'lucide-react';
+
+const DIVISIONS: PiketDivision[] = [
+  'Divisi Unggas (Puyuh & Itik)',
+  'Divisi Pakan & Nutrisi Ternak',
+  'Divisi Kesehatan & Biosekuriti',
+  'Divisi Penelitian & Data Lapangan',
+  'Divisi Sanitasi & Kebersihan',
+  'Divisi Sarana & Prasarana',
+];
+
+const LOCATIONS: UnitLocation[] = ['Kandang Puyuh', 'Kandang Itik', 'Penelitian'];
 
 interface AdminDashboardProps {
   records: AttendanceRecord[];
@@ -84,8 +100,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             formattedTime: `${row.waktu || ''} WIB`,
             studentName: row.nama || '',
             studentNim: row.nim || '',
+            division: (row.divisi || DIVISIONS[0]) as PiketDivision,
             shift: (row.shift || '06.30') as PiketShift,
-            location: (row.lokasi || 'Kandang Itik') as UnitLocation,
+            location: (row.lokasi || 'Kandang Puyuh') as UnitLocation,
             photoUrl: row.urlFoto || '',
             notes: row.catatan || '',
             status: (row.status || 'Tepat Waktu') as AttendanceRecord['status'],
@@ -127,9 +144,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Add Manual Record Modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [manualName, setManualName] = useState('');
-  const [manualNim, setManualNim] = useState('');
+const [manualNim, setManualNim] = useState('');
+  const [manualDivision, setManualDivision] = useState<PiketDivision>(DIVISIONS[0]);
   const [manualShift, setManualShift] = useState<PiketShift>('06.30');
-const [manualLocation, setManualLocation] = useState<UnitLocation>('Kandang Itik');
+  const [manualLocation, setManualLocation] = useState<UnitLocation>('Kandang Puyuh');
   const [manualNotes, setManualNotes] = useState('');
   const [manualStatus, setManualStatus] = useState<AttendanceRecord['status']>('Tepat Waktu');
   const [manualPhoto, setManualPhoto] = useState('');
@@ -225,8 +243,9 @@ const pagi = rows.filter((r) => r.shift === '06.30').length;
       'ID Presensi',
       'Tanggal',
       'Waktu WIB',
-      'Nama Mahasiswa',
+'Nama Mahasiswa',
       'NIM',
+      'Divisi Piket',
       'Shift Piket',
       'Lokasi Unit/Kandang',
       'Status Kehadiran',
@@ -240,7 +259,8 @@ const cell = (v: string | undefined) => `"${String(v ?? '').replace(/"/g, '""')}
       cell(r.formattedDate),
       cell(r.formattedTime),
       cell(r.studentName),
-      cell(r.studentNim),
+cell(r.studentNim),
+      cell(r.division),
       cell(r.shift),
       cell(r.location),
       cell(r.status),
@@ -285,25 +305,23 @@ const csvContent =
 
     try {
       // Kirim ke spreadsheet via Apps Script (termasuk foto bila ada)
-      if (gasWebhookUrl) {
-        const res = await fetch(gasWebhookUrl, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'submitManualAttendance',
-            timestamp: now.toISOString(),
-            namaMahasiswa: manualName.trim(),
-            nim: manualNim.trim(),
-            waktuPiket: manualShift,
-            lokasi: manualLocation,
-            status,
-            catatan,
-            fotoBase64: manualPhoto || '',
-          }),
-        });
-        void res;
-      }
+      await fetch(gasWebhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'submitManualAttendance',
+          timestamp: now.toISOString(),
+          namaMahasiswa: manualName.trim(),
+          nim: manualNim.trim(),
+          divisi: manualDivision,
+          waktuPiket: manualShift,
+          lokasi: manualLocation,
+          status,
+          catatan,
+          fotoBase64: manualPhoto || '',
+        }),
+      });
 
       const newRec: AttendanceRecord = {
         id: `TNK61-ADM-${Date.now().toString(36).toUpperCase()}`,
@@ -312,6 +330,7 @@ const csvContent =
         formattedTime: formatWIBTime(now),
         studentName: manualName.trim(),
         studentNim: manualNim.trim(),
+        division: manualDivision,
         shift: manualShift,
         location: manualLocation,
         photoUrl: manualPhoto || '',
@@ -712,6 +731,7 @@ const csvContent =
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-600">
                   <th className="py-3 px-4">Waktu (WIB)</th>
                   <th className="py-3 px-4">Nama Mahasiswa & NIM</th>
+<th className="py-3 px-4">Divisi Piket</th>
                   <th className="py-3 px-4">Shift</th>
                   <th className="py-3 px-4">Lokasi Piket</th>
                   <th className="py-3 px-4">Status</th>
@@ -741,6 +761,16 @@ const csvContent =
                       <div className="text-[11px] font-mono text-blue-700 font-medium">
                         {rec.studentNim}
                       </div>
+                    </td>
+
+{/* Division */}
+                    <td className="py-3.5 px-4 max-w-[180px]">
+                      <span
+                        className="text-[11px] text-slate-600 font-medium leading-tight"
+                        title={rec.division}
+                      >
+                        {rec.division}
+                      </span>
                     </td>
 
                     {/* Shift */}
@@ -909,10 +939,15 @@ const csvContent =
                 </div>
               </div>
 
-              <div>
-                <span className="text-slate-500 block text-xs">Lokasi Kandang:</span>
-                <span className="font-medium text-slate-900">{previewRecord.location}</span>
-              </div>
+<div>
+                  <span className="text-slate-500 block text-xs">Divisi Piket:</span>
+                  <span className="font-medium text-slate-900">{previewRecord.division}</span>
+                </div>
+
+                <div>
+                  <span className="text-slate-500 block text-xs">Lokasi Kandang:</span>
+                  <span className="font-medium text-slate-900">{previewRecord.location}</span>
+                </div>
 
               {previewRecord.notes && (
                 <div>
@@ -985,6 +1020,23 @@ const csvContent =
                 />
               </div>
 
+<div>
+                <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
+                  Divisi Piket
+                </label>
+                <select
+                  value={manualDivision}
+                  onChange={(e) => setManualDivision(e.target.value as PiketDivision)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
+                >
+                  {DIVISIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-700 mb-1">
@@ -1028,9 +1080,11 @@ const csvContent =
                   onChange={(e) => setManualLocation(e.target.value as UnitLocation)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-900 bg-white"
                 >
-<option value="Kandang Itik">Kandang Itik</option>
-                  <option value="Kandang Puyuh">Kandang Puyuh</option>
-                  <option value="Penelitian">Penelitian</option>
+{LOCATIONS.map((l) => (
+                    <option key={l} value={l}>
+                      {l}
+                    </option>
+                  ))}
                 </select>
               </div>
 
