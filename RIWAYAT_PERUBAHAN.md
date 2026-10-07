@@ -25,7 +25,7 @@ Memasukkan seluruh source Next.js beserta konfigurasi build.
 - `next.config.ts` — buang `remotePatterns` picsum.photos & logika HMR AI Studio
 - `next.config.ts` — hapus `eslint.ignoreDuringBuilds: true` agar lint ikut berjalan saat build
 - File yang tidak dipakai dibuang: `hooks/use-mobile.ts`, `lib/utils.ts`, `metadata.json`, `components/GasConfigModal.tsx`
-- Aset gambar yang tidak dirujuk kode dibuang: `public/images/hero_disekolahku_presensi.jpg` dan `src/assets/images/hero_disekolahku_presensi_1791185353193.jpg` (duplikat, ~1,8 MB, nol referensi di seluruh `.tsx`)
+- Aset gambar dari ekspor AI Studio **dipertahankan**: `public/images/hero_disekolahku_presensi.jpg` dan `src/assets/images/hero_disekolahku_presensi_1791185353193.jpg` (duplikat ~1,8 MB, belum dirujuk kode — dipakai sebagai referensi visual layout AI Studio)
 - `.gitignore` — tambahkan `tsconfig.tsbuildinfo`
 - `app/icon.svg` — favicon baru, menghilangkan 404 `favicon.ico`; `app/layout.tsx` mendaftarkannya lewat `icons`
 
