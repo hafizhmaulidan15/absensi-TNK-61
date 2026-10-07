@@ -170,15 +170,15 @@ SEKOLAH VOKASI IPB · TNK 61 · [LOKASI]
 
 dengan garis oranye `#F58220` di atas baris watermark.
 
-### Toleransi dikembalikan ke 15 menit
+### Toleransi seragam 10 menit
 
-`lib/timeUtils.ts` — `closeMinute` tiap shift +15 menit (`06.45`, `12.15`, `16.15`). Label status diganti ke empat nilai: `Buka`, `Sisa Waktu`, `Terlambat`, `Terkunci`, dengan `ShiftAvailabilityLabel` sebagai union type.
+`lib/timeUtils.ts` — konstanta `TOLERANCE_MINUTES = 10` jadi satu sumber kebenaran; `closeMinute` tiap shift = jam shift + 10 menit (`06.40`, `12.10`, `16.10`). Label status: `Buka`, `Sisa Waktu`, `Terlambat`, `Terkunci`, dengan `ShiftAvailabilityLabel` sebagai union type.
 
 ### `components/Navbar.tsx` dan `components/GuidanceModal.tsx`
 
 - Logo memakai `bg-ipb-blue` dengan garis bawah oranye; teks hover ke token IPB
 - Jam navbar memakai `tabular-nums`
-- Modal SOP: header biru IPB + aksen oranye, toleransi 15 menit, section foto menjelaskan kamera-atau-unggah beserta watermark, tombol tutup oranye, plus rujukan sv.ipb.ac.id
+- Modal SOP: header biru IPB + aksen oranye, toleransi dari `TOLERANCE_MINUTES`, section foto hanya kamera
 
 ---
 
@@ -301,7 +301,7 @@ Dijalankan terhadap dev server `localhost:3000`.
 | Unggah file | Preview data:image/jpeg 4 KB, jadi JPEG bukan PNG mentah — watermark terpasang |
 | Ambil ulang | Kembali ke live preview, `readyState` 4 |
 | Submit di luar jam shift | Tombol nonaktif |
-| Modal SOP | "15 menit", "PC Riswidaressi", "sv.ipb.ac.id" semua muncul |
+| Modal SOP | "10 menit" dan "PC Riswidaressi" muncul; tidak ada rujukan sv.ipb.ac.id |
 
 **Panel admin**
 

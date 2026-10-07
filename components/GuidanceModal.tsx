@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { X, BookOpen, Clock, ShieldCheck, Camera, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { SHIFT_CONFIGS } from '@/lib/timeUtils';
+import React, { useEffect } from 'react';
+import { X, BookOpen, Clock, ShieldCheck, Camera, CheckCircle2 } from 'lucide-react';
+import { SHIFT_CONFIGS, TOLERANCE_MINUTES } from '@/lib/timeUtils';
 
 interface GuidanceModalProps {
   isOpen: boolean;
@@ -10,11 +10,31 @@ interface GuidanceModalProps {
 }
 
 export const GuidanceModal: React.FC<GuidanceModalProps> = ({ isOpen, onClose }) => {
+  // Tutup dengan tombol Escape
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl max-w-2xl w-full my-8 overflow-hidden shadow-2xl animate-fade-in border border-slate-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto"
+      onClick={onClose}
+      role="presentation"
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="SOP dan Panduan Piket"
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-2xl max-w-2xl w-full my-8 overflow-hidden shadow-2xl animate-fade-in border border-slate-200"
+      >
         
 {/* Header biru resmi IPB dengan aksen oranye */}
         <div className="p-5 sm:p-6 bg-ipb-blue text-white flex items-center justify-between border-b-2 border-ipb-orange">
@@ -49,15 +69,15 @@ export const GuidanceModal: React.FC<GuidanceModalProps> = ({ isOpen, onClose })
             </h4>
 <p className="text-slate-600 text-xs leading-relaxed">
               Presensi tiap shift hanya bisa diisi pada jamnya: Pagi 06.00&ndash;11.59, Siang
-              12.00&ndash;15.59, Sore 16.00&ndash;21.00 WIB. Toleransi keterlambatan maksimal{' '}
-              <strong>15 menit</strong> setelah jam shift; lewat itu masih boleh diisi tetapi
-              dicatat Terlambat.
+              12.00&ndash;15.59, Sore 16.00&ndash;21.00 WIB. Toleransi keterlambatan seragam{' '}
+              <strong>{TOLERANCE_MINUTES} menit</strong> setelah jam shift; lewat itu masih
+              boleh diisi tetapi dicatat Terlambat.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
               {SHIFT_CONFIGS.map((s) => (
                 <div key={s.shift} className="p-3 rounded-xl border border-slate-200 bg-slate-50 space-y-1">
-                  <div className="font-mono font-bold text-ipb-blue text-sm">
+                  <div className="font-bold text-ipb-blue text-sm">
                     {s.shift} WIB
                   </div>
                   <div className="font-semibold text-xs text-slate-900">{s.name}</div>
@@ -97,10 +117,10 @@ export const GuidanceModal: React.FC<GuidanceModalProps> = ({ isOpen, onClose })
                 <p className="font-semibold">Foto dokumentasi harus:</p>
                 <ul className="list-disc list-inside space-y-1 text-orange-900/90 pl-1">
                   <li>
-                    Diambil <strong>langsung saat piket</strong> lewat kamera perangkat (paling
-                    disarankan) atau diunggah dari galeri.
+                    Diambil <strong>langsung saat piket</strong> lewat kamera perangkat.
+                    Tidak ada opsi unggah dari galeri.
                   </li>
-                  <li>Watermark <code>SEKOLAH VOKASI IPB · TNK 61 · [LOKASI] · [NAMA] · [WAKTU]</code> ditambahkan otomatis.</li>
+                  <li>Watermark resmi ditambahkan otomatis ke setiap foto.</li>
                   <li>Mahasiswa sedang melaksanakan tugas piket, bukan foto lama.</li>
                   <li>Pencahayaan cukup terang, tidak buram, dan bukan foto objek sembarangan.</li>
                 </ul>
@@ -112,12 +132,8 @@ export const GuidanceModal: React.FC<GuidanceModalProps> = ({ isOpen, onClose })
 <span className="font-bold text-slate-800 block">
               Butuh Bantuan Teknis atau Izin Piket?
             </span>
-            <p className="text-slate-600">
+<p className="text-slate-600">
               Hubungi <strong>PC Riswidaressi</strong> untuk kendala dan konfirmasi.
-            </p>
-            <p className="text-slate-500">
-              Rujukan identitas resmi: sv.ipb.ac.id &middot; Program Studi Teknologi dan
-              Manajemen Ternak.
             </p>
           </div>
 

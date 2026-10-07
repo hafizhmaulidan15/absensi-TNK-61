@@ -1,34 +1,37 @@
 ﻿import { PiketShift, ShiftInfo } from '@/types/attendance';
 
+/** Toleransi keterlambatan: seragam 10 menit untuk ketiga shift */
+export const TOLERANCE_MINUTES = 10;
+
 export const SHIFT_CONFIGS: ShiftInfo[] = [
   {
     shift: '06.30',
     name: 'Piket Pagi',
-    timeRange: '06.30 - 06.45 WIB (Maks 15 Menit)',
+    timeRange: `06.30 - 06.40 WIB (Maks ${TOLERANCE_MINUTES} Menit)`,
     openHour: 6,
     openMinute: 30,
     closeHour: 6,
-    closeMinute: 45,
+    closeMinute: 40,
     description: 'Pemberian pakan pagi, sanitasi kandang, dan recording ternak.',
   },
   {
     shift: '12.00',
     name: 'Piket Siang',
-    timeRange: '12.00 - 12.15 WIB (Maks 15 Menit)',
+    timeRange: `12.00 - 12.10 WIB (Maks ${TOLERANCE_MINUTES} Menit)`,
     openHour: 12,
     openMinute: 0,
     closeHour: 12,
-    closeMinute: 15,
+    closeMinute: 10,
     description: 'Pengecekan air minum ternak, ventilasi kandang, dan pakan hijauan.',
   },
   {
     shift: '16.00',
     name: 'Piket Sore',
-    timeRange: '16.00 - 16.15 WIB (Maks 15 Menit)',
+    timeRange: `16.00 - 16.10 WIB (Maks ${TOLERANCE_MINUTES} Menit)`,
     openHour: 16,
     openMinute: 0,
     closeHour: 16,
-    closeMinute: 15,
+    closeMinute: 10,
     description: 'Pemberian pakan sore, kontrol brooding/kandang, dan penutupan tirai.',
   },
 ];
@@ -84,8 +87,8 @@ export type ShiftAvailabilityLabel = 'Buka' | 'Terkunci' | 'Sisa Waktu' | 'Terla
  *
  * - `Terkunci`   : di luar jendela pengisian shift tersebut
  * - `Sisa Waktu` : masih dalam jendela, tapi belum sampai jam shift
- * - `Buka`       : sudah jam shift, masih dalam toleransi 15 menit
- * - `Terlambat`  : lewat toleransi 15 menit, masih dalam jendela (boleh kirim)
+ * - `Buka`       : sudah jam shift, masih dalam toleransi
+ * - `Terlambat`  : lewat toleransi, masih dalam jendela (boleh kirim)
  */
 export function getShiftAvailability(
   shift: PiketShift,
@@ -152,7 +155,7 @@ export function getShiftAvailability(
     isAvailable: true,
     reason: `Presensi dibuka. Batas tepat waktu ${fmtMinutes(
       closeTotalMinutes
-    )} WIB (15 menit setelah ${fmtMinutes(openTotalMinutes)}).`,
+    )} WIB (${TOLERANCE_MINUTES} menit setelah ${fmtMinutes(openTotalMinutes)}).`,
     statusLabel: 'Buka',
     minutesRemaining: remaining,
   };
@@ -217,7 +220,7 @@ export function formatWIBDate(date: Date): string {
 }
 
 /**
- * Hitung status kehadiran (Tepat Waktu / Terlambat), toleransi 15 menit
+ * Hitung status kehadiran (Tepat Waktu / Terlambat), toleransi 10 menit
  */
 export function calculateAttendanceStatus(
   shift: PiketShift,

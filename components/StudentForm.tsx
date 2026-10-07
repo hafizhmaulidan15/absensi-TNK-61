@@ -24,9 +24,8 @@ import {
   MapPin,
   FileText,
   ShieldCheck,
-  Send,
+Send,
   RefreshCw,
-Upload,
   Lock,
   Clock,
   AlertTriangle,
@@ -36,7 +35,7 @@ interface StudentFormProps {
   currentTime: Date;
   selectedShift: PiketShift;
   onAttendanceSubmitted: (record: AttendanceRecord) => void;
-gasWebhookUrl: string;
+  gasWebhookUrl: string;
   onOpenGuidance: () => void;
 }
 
@@ -46,13 +45,11 @@ const UNIT_LOCATIONS: Array<{ value: UnitLocation; desc: string }> = [
   { value: 'Penelitian', desc: 'Eksperimen & riset terapan' },
 ];
 
-
-
 export const StudentForm: React.FC<StudentFormProps> = ({
   currentTime,
   selectedShift,
   onAttendanceSubmitted,
-gasWebhookUrl,
+  gasWebhookUrl,
 onOpenGuidance,
 }) => {
   // Form State
@@ -73,9 +70,8 @@ onOpenGuidance,
   const [submittedRecord, setSubmittedRecord] = useState<AttendanceRecord | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const shiftAvailability = getShiftAvailability(selectedShift, currentTime);
   const shiftConfig = SHIFT_CONFIGS.find((s) => s.shift === selectedShift);
@@ -141,10 +137,10 @@ const stream = await navigator.mediaDevices.getUserMedia({
    * Terapkan watermark resmi TNK 61 pada frame kamera.
    * Baris 1: SEKOLAH VOKASI IPB · TNK 61 · [LOKASI] · [NAMA] · [WAKTU WIB]
    */
-  const applyWatermark = (source: HTMLVideoElement | HTMLImageElement) => {
+  const applyWatermark = (source: HTMLVideoElement) => {
     const canvas = document.createElement('canvas');
-    const srcW = 'videoWidth' in source ? source.videoWidth : source.naturalWidth;
-    const srcH = 'videoHeight' in source ? source.videoHeight : source.naturalHeight;
+    const srcW = source.videoWidth;
+    const srcH = source.videoHeight;
     canvas.width = srcW || 640;
     canvas.height = srcH || 480;
     const ctx = canvas.getContext('2d');
@@ -188,37 +184,7 @@ const stream = await navigator.mediaDevices.getUserMedia({
     }
   };
 
-  /**
-   * Unggah file dari perangkat, lalu diberi watermark yang sama seperti kamera.
-   */
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setSubmitError('Berkas harus berupa gambar.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const dataUrl = applyWatermark(img);
-        if (dataUrl) {
-          setPhotoDataUrl(dataUrl);
-          stopCamera();
-        }
-        setSubmitError(null);
-      };
-      img.onerror = () => setSubmitError('Gagal memuat gambar. Coba berkas lain.');
-      img.src = String(reader.result);
-    };
-    reader.onerror = () => setSubmitError('Gagal membaca berkas gambar.');
-    reader.readAsDataURL(file);
-    e.target.value = '';
-  };
-
-  // Auto-start kamera saat form dibuka
+// Auto-start kamera saat form dibuka
   useEffect(() => {
     const kick = window.setTimeout(() => startCamera('environment'), 0);
     return () => {
@@ -332,14 +298,14 @@ const stream = await navigator.mediaDevices.getUserMedia({
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 Ringkasan Presensi
               </span>
-              <span className="text-[11px] font-mono font-bold text-ipb-blue bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+              <span className="text-[11px] font-bold text-ipb-blue bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
                 {submittedRecord.id}
               </span>
             </div>
 
             <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 text-xs">
               <Detail label="Nama Mahasiswa" value={submittedRecord.studentName} />
-              <Detail label="NIM" value={submittedRecord.studentNim || '-'} mono />
+              <Detail label="NIM" value={submittedRecord.studentNim || '-'} />
               <Detail
                 label="Waktu Submit"
                 value={`${submittedRecord.formattedDate} · ${submittedRecord.formattedTime}`}
@@ -469,7 +435,7 @@ const stream = await navigator.mediaDevices.getUserMedia({
                   value={studentNim}
                   onChange={(e) => setStudentNim(e.target.value)}
                   placeholder="NIM sesuai Kartu Tanda Mahasiswa"
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 font-mono min-h-[44px]"
+                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 min-h-[44px]"
                 />
               </div>
               <p className="text-[10px] text-slate-500 mt-1">
@@ -618,9 +584,9 @@ const stream = await navigator.mediaDevices.getUserMedia({
                 </button>
               )}
 
-              <p className="text-[10px] text-slate-500 leading-relaxed">
-                Watermark resmi <code>SEKOLAH VOKASI IPB · TNK 61</code> otomatis ditambahkan
-                ke foto. Fitur terbaik: ambil langsung saat piket berlangsung.
+<p className="text-[10px] text-slate-500 leading-relaxed">
+                Watermark resmi otomatis ditambahkan ke setiap foto. Ambil langsung
+                saat piket berlangsung.
               </p>
             </div>
           )}
@@ -668,17 +634,11 @@ const stream = await navigator.mediaDevices.getUserMedia({
 };
 
 /** Label + nilai ringkas untuk kartu hasil */
-const Detail: React.FC<{ label: string; value: string; mono?: boolean }> = ({
-  label,
-  value,
-  mono,
-}) => (
+const Detail: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <div className="min-w-0">
     <span className="text-slate-500 block text-[11px]">{label}</span>
     <span
-      className={`font-semibold text-slate-900 break-words ${
-        mono ? 'font-mono text-xs' : 'text-xs'
-      }`}
+      className="font-semibold text-slate-900 break-words text-xs"
     >
       {value}
     </span>

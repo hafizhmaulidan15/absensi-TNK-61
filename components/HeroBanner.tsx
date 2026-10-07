@@ -4,7 +4,7 @@ import React from 'react';
 import { Building2, Sprout } from 'lucide-react';
 
 interface HeroBannerProps {
-  currentTime: Date;
+  onOpenGuidance?: () => void;
 }
 
 const COMMODITY_UNITS = [
@@ -56,8 +56,7 @@ export const HeroBanner: React.FC<HeroBannerProps> = () => {
             </div>
           ))}
         </div>
-
-        </div>
+      </div>
     </section>
   );
 };

@@ -18,7 +18,7 @@ Project ini adalah kem independen dari TNK 62 — backend Google Sheets, Drive f
 | Akses admin | Klik logo TNK 61 di navbar, atau `/#admin` |
 | Rujukan visual | sv.ipb.ac.id — identitas visual resmi Sekolah Vokasi IPB |
 | Palet warna | Biru IPB `#003882` / `#0047BA`, aksen oranye `#F58220`, latar `#F8FAFC` |
-| Toleransi shift | 15 menit setelah jam shift |
+| Toleransi shift | 10 menit setelah jam shift, seragam di ketiga shift (`TOLERANCE_MINUTES`) |
 | Status backend | **Belum disambung** — `GAS_WEBHOOK_URL` kosong, sheet & Drive belum dibuat |
 
 ### 1.1 Token Warna (`app/globals.css`)
@@ -79,9 +79,11 @@ Didefinisikan di blok `@theme` Tailwind v4, dipakai sebagai kelas `bg-ipb-blue`,
 
 | Shift | Jam | Nama | Toleransi (tepat waktu sampai) |
 | :--- | :--- | :--- | :--- |
-| `06.30` | 06.30 WIB | Piket Pagi | 06.45 WIB |
-| `12.00` | 12.00 WIB | Piket Siang | 12.15 WIB |
-| `16.00` | 16.00 WIB | Piket Sore | 16.15 WIB |
+| `06.30` | 06.30 WIB | Piket Pagi | 06.40 WIB |
+| `12.00` | 12.00 WIB | Piket Siang | 12.10 WIB |
+| `16.00` | 16.00 WIB | Piket Sore | 16.10 WIB |
+
+Nilai toleransi diatur satu konstanta `TOLERANCE_MINUTES = 10` di `lib/timeUtils.ts`, dipakai bersama oleh tiga shift, teks modal SOP, dan widget shift picker.
 
 ### 4.2 Jendela Pengisian (Kunci Jam)
 
@@ -100,33 +102,36 @@ Di luar semua jendela (21.00 – 06.00), **tidak ada** shift yang bisa diisi.
 | Kondisi | Status | Bisa kirim? |
 | :--- | :--- | :--- |
 | Sebelum jam shift (masih dalam jendela) | `Sisa Waktu` | Ya |
-| Tepat pada jam shift sampai +15 menit | `Buka` | Ya |
-| Setelah lewat +15 menit (tapi masih dalam jendela) | `Terlambat` | **Ya** — sengaja boleh, supaya tetap tercatat |
+| Tepat pada jam shift sampai +10 menit | `Buka` | Ya |
+| Setelah lewat +10 menit (tapi masih dalam jendela) | `Terlambat` | **Ya** — sengaja boleh, supaya tetap tercatat |
 | Di luar jendela | `Terkunci` | **Tidak** |
 
 **Rumus status** (`calculateAttendanceStatus`):
-`totalMenitWIB <= (jamShift + 15 menit)` → `Tepat Waktu`, selain itu → `Terlambat`.
+`totalMenitWIB <= (jamShift + TOLERANCE_MINUTES)` → `Tepat Waktu`, selain itu → `Terlambat`.
 
 ### 4.4 Form Mahasiswa
 
 | Field | Aturan |
 | :--- | :--- |
-| Nama Lengkap | Wajib; ada saran cepat nama dari `NAME_SUGGESTIONS` |
-| NIM | Wajib; format SV IPB (`J030121...`) |
+| Nama Lengkap | Wajib |
+| NIM | Wajib; placeholder "NIM sesuai Kartu Tanda Mahasiswa", contoh format `J030121...` |
+| Divisi Piket | **Ketik bebas**, opsional. Tidak ada daftar tertutup — divisi baru bisa muncul tanpa ubah kode |
 | Shift | Wajib; terkunci di luar jendela (§4.2) |
-| Divisi Piket | Wajib; 6 divisi tetap (§4.8) |
-| Lokasi | Kandang Puyuh / Kandang Itik / Penelitian |
-| Foto | **Wajib**; kamera langsung (disarankan) atau unggah file |
+| Lokasi | Kandang Puyuh / Kandang Itik / Penelitian (tombol kartu) |
+| Foto | **Wajib, hanya dari kamera** — tidak ada upload galeri |
 | Deskripsi Kegiatan | Opsional; default: `Piket kandang/laboratorium terlaksana tepat waktu.` |
 
-### 4.5 Foto — Ketentuan
+### 4.5 Foto — Ketentuan Wajib
 
-1. Dua sumber foto: kamera bawaan (`getUserMedia`) **atau** unggah file dari perangkat.
-2. Kamera otomatis menyala saat form dibuka; `facingMode: 'environment'` (belakang) sebagai default, dengan tombol ganti kamera depan/belakang.
-3. **Kedua sumber foto diberi watermark yang sama.** Baris biru tua berisi `SEKOLAH VOKASI IPB · TNK 61 · [LOKASI]`, baris kedua `nama · tanggal jam WIB`. Baris pemisah oranye IPB di atas watermark.
-4. Format keluaran: `data:image/jpeg;base64,...` kualitas 0.85.
+1. Foto hanya boleh diambil lewat kamera bawaan (`getUserMedia`). **Tidak ada jalur unggah file** — `input[type=file]` tidak ada di form.
+2. Kamera otomatis menyala saat form dibuka; `facingMode: 'environment'` (belakang) sebagai default, dengan tombol ganti kamera depan/belakang dan tombol "Coba Lagi Kamera" kalau izin ditolak.
+3. Tombol **"Ambil Foto Sekarang"** mengambil frame ke canvas.
+4. Watermark dua baris otomatis ditambahkan ke setiap foto: baris identitas resmi SV IPB dengan `[LOKASI]`, lalu `[nama] · [tanggal Indonesia] [HH:MM] WIB`, dengan garis oranye `#F58220` di atasnya.
+5. Format keluaran: `data:image/jpeg;base64,...` kualitas 0.85.
 
-**Catatan jujur:** karena jalur unggah file tersedia, mahasiswa secara teknis bisa memakai foto lama. Solusinya bukan teknis tapiström disajakan: caption watermark mencantumkan jam, dan SOP menegaskan foto diambil saat piket.
+**Alasan kenapa galeri ditutup:** aturan tiap shift melarang bukti piket memakai foto lama. Karena tidak ada jalur lain, bukti baru bisa diambil hanya saat piket berlangsung.
+
+**Catatan teknis:** pemasangan stream ke `<video>` dilakukan di `useEffect`, bukan langsung di `startCamera`. Kalau/langsung di sana, `videoRef.current` masih `null` karena elemennya belum dirender, dan stream menggantung tanpa menempel — kamera terlihat mati tanpa error.
 
 ### 4.6 Data Manual (Panel Admin)
 
@@ -134,7 +139,7 @@ Di luar semua jendela (21.00 – 06.00), **tidak ada** shift yang bisa diisi.
 | :--- | :--- |
 | Nama | Wajib |
 | NIM | Opsional |
-| Divisi Piket | 6 divisi tetap (§4.8) |
+| Divisi Piket | Ketik bebas, opsional |
 | Shift | Pagi / Siang / Sore |
 | Status | Bisa dipilih: `Tepat Waktu` / `Terlambat` / `Toleransi` |
 | Lokasi | Kandang Puyuh / Kandang Itik / Penelitian |
@@ -144,19 +149,6 @@ Di luar semua jendela (21.00 – 06.00), **tidak ada** shift yang bisa diisi.
 Data manual otomatis diberi akhiran `[INPUT MANUAL]` pada kolom Catatan di spreadsheet, dan di dashboard muncul badge abu **Manual**.
 
 > Saat `GAS_WEBHOOK_URL` masih kosong, input manual **ditolak** dengan pesan error, karena tidak ada tujuan backend. Sengaja tidak diam-diam disimpan lokal saja supaya admin tidak mengira data sudah masuk spreadsheet.
-
-### 4.8 Divisi Piket
-
-Enam divisi (`PiketDivision` di `types/attendance.ts`):
-
-1. Divisi Unggas (Puyuh & Itik)
-2. Divisi Pakan & Nutrisi Ternak
-3. Divisi Kesehatan & Biosekuriti
-4. Divisi Penelitian & Data Lapangan
-5. Divisi Sanitasi & Kebersihan
-6. Divisi Sarana & Prasarana
-
-Divisi dikirim ke backend sebagai kolom tersendiri (kolom D di spreadsheet), bukan digabung ke Catatan.
 
 ### 4.7 Keamanan
 
@@ -180,22 +172,20 @@ Layout **2 kolom side-by-side** di desktop, susun ke bawah di mobile.
 
 | Komponen | Detail |
 | :--- | :--- |
-| Top Bar kampus | `IPB UNIVERSITY │ SEKOLAH VOKASI · KAMPUS BOGOR` + lencana Akreditasi A BAN-PT dan Sarjana Terapan D4 |
-| Hero banner | Kurikulum 70% praktik lapangan, gelar S.Tr.Pt., tiga unit commodity, tautan rujukan sv.ipb.ac.id |
+| Hero banner | Identitas program studi + tiga unit kerja piket (Kandang Puyuh, Kandang Itik, Unit Penelitian) |
 | Widget waktu | Jam WIB realtime + tanggal resmi Indonesia, format tabular agar tidak bergeser tiap detik |
 | Pemilih shift | 3 sesi dengan badge status `Buka` / `Sisa Waktu` / `Terlambat` / `Terkunci`, plus sisa menit; langsung terhubung ke form |
 | Tombol SOP | Tombol cepat oranye IPB membuka modal SOP |
-| Kartu profil SV IPB | Akreditasi A BAN-PT, D4, bar 70%, dan ringkasan 3 unit lokasi yang menyorot unit terpilih di form |
 
 **Kolom kanan** — form presensi, 5 langkah bernomor:
 
 | Langkah | Isi |
 | :--- | :--- |
 | Header | Biru resmi IPB dengan garis aksen oranye + lencana shift aktif |
-| 1 | Identitas mahasiswa: nama + saran cepat nama, NIM |
-| 2 | Pilihan divisi piket (dropdown 6 divisi) |
+| 1 | Identitas mahasiswa: nama lengkap dan NIM (opsional, sesuai KTM) |
+| 2 | Divisi piket — **field ketik bebas** |
 | 3 | Kartu pilihan lokasi (Kandang Puyuh / Kandang Itik / Penelitian) |
-| 4 | Foto dokumentasi: live preview kamera, tombol ambil foto, tombol unggah file, ganti kamera, watermark otomatis |
+| 4 | Foto dokumentasi: live preview kamera, "Ambil Foto Sekarang", ganti kamera, watermark otomatis |
 | 5 | Deskripsi kegiatan piket lapangan |
 
 | Fungsi lain | Detail |
@@ -208,17 +198,40 @@ Layout **2 kolom side-by-side** di desktop, susun ke bawah di mobile.
 
 ### 5.2 Panel Admin (`/#admin`)
 
+Tampilan **console gelap** dengan sidebar kiri — sengaja berbeda dari portal mahasiswa yang terang, supaya layar tidak tertukar saat dibuka salah. Fungsi dan perilakunya sama persis dengan yang di TNK 62.
+
+Layout: `lg:grid lg:grid-cols-12`. Sidebar `lg:col-span-3 xl:col-span-2` dan **sticky** di desktop; konten `lg:col-span-9 xl:col-span-10`. Di mobile sidebar turun ke atas dan tidak sticky.
+
+**Sidebar**
+
+| Bagian | Isi |
+| :--- | :--- |
+| Identitas | Badge "Admin Panel" dengan titik status, judul, label TNK 61 · SV IPB |
+| Navigasi | Dua view: **Ringkasan** dan **Data Presensi** |
+| Aksi | Input Manual, Ekspor CSV, Kunci Panel |
+| Ringkasan Cepat | Total, hari ini, ketepatan waktu |
+
+**View Ringkasan**
+
 | Fungsi | Detail |
 | :--- | :--- |
-| Login | PIN, tombol tampil/sembunyikan, pesan "Password salah" |
+| KPI | Total presensi, presensi hari ini, tingkat ketepatan waktu, distribusi sesi |
+| Sebaran Lokasi | Bar proporsional per unit |
+| Sebaran Shift | Bar proporsional per sesi |
+
+> KPI ketepatan waktu menampilkan "—" kalau belum ada data, bukan 100% palsu.
+
+**View Data Presensi**
+
+| Fungsi | Detail |
+| :--- | :--- |
 | Sumber data | Ambil dari spreadsheet via `doGet`, fallback ke localStorage |
 | Tombol Segarkan | Tarik ulang data sheet |
 | Indikator status | Titik hijau (siap) / amber (memuat) / merah (gagal) |
-| Filter tanggal | Semua / Hari Ini / Kemarin / 7 Hari / Tanggal khusus |
+| Filter tanggal | Semua / Hari Ini / Kemarin / 7 Hari / Pilih Tanggal |
 | Filter shift | Semua / Pagi / Siang / Sore |
-| Filter status | Semua / Tepat Waktu / Toleransi / Terlambat |
 | Pencarian | Nama, NIM, atau lokasi |
-| Statistik KPI | Total, presensi hari ini, tingkat ketepatan waktu, distribusi sesi |
+| Tabel | Waktu, mahasiswa, divisi, shift, lokasi, status, foto, aksi |
 | Badge Manual | Otomatis muncul bila Catatan memuat `[INPUT MANUAL]` |
 | Pratinjau foto | Klik thumbnail → modal detail |
 | Ekspor CSV | `Rekap_Presensi_Piket_TNK61_<tanggal>.csv` (dengan BOM UTF-8) |
@@ -226,11 +239,13 @@ Layout **2 kolom side-by-side** di desktop, susun ke bawah di mobile.
 | Verifikasi | Tandai baris sudah diverifikasi |
 | Hapus | Hapus baris (dengan konfirmasi) |
 
-### 5.3 Modal SOP (tombol "SOP" di navbar)
+**Login**: PIN dengan tombol lihat/sembunyikan, pesan `Access denied` kalau salah.
 
-1. Jadwal sesi piket & toleransi waktu (maks 15 menit)
+### 5.3 Modal SOP (tombol "SOP" di navbar dan tombol oranye di kolom kiri)
+
+1. Jadwal sesi piket & toleransi waktu (maks 10 menit)
 2. SOP pakaian & APD — WP Praktikum + sepatu boots
-3. SOP dokumentasi foto — kamera saat piket atau unggah file, watermark wajib
+3. SOP dokumentasi foto — hanya kamera saat piket, watermark otomatis
 4. Kontak bantuan — **PC Riswidaressi** untuk kendala dan konfirmasi
 
 ---
@@ -246,7 +261,7 @@ Header baris 1 **wajib** ada:
 | A | Timestamp | DateTime (otomatis) |
 | B | Nama Mahasiswa | String |
 | C | NIM | String |
-| D | Divisi Piket | Satu dari 6 divisi (§4.8) |
+| D | Divisi Piket | String bebas (diisi mahasiswa) |
 | E | Waktu Piket | `06.30` / `12.00` / `16.00` |
 | F | Lokasi | `Kandang Puyuh` / `Kandang Itik` / `Penelitian` |
 | G | Status | `Tepat Waktu` / `Terlambat` / `Toleransi` |

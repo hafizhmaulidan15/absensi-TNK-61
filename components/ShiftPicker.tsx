@@ -1,7 +1,13 @@
 'use client';
 
 import React from 'react';
-import { SHIFT_CONFIGS, getShiftAvailability, formatWIBTime, formatIndonesianDate } from '@/lib/timeUtils';
+import {
+  SHIFT_CONFIGS,
+  getShiftAvailability,
+  formatWIBTime,
+  formatIndonesianDate,
+  TOLERANCE_MINUTES,
+} from '@/lib/timeUtils';
 import { Clock, CheckCircle2, AlertTriangle, Lock, Hourglass, BookOpen } from 'lucide-react';
 import { PiketShift } from '@/types/attendance';
 
@@ -64,7 +70,9 @@ export const ShiftPicker: React.FC<ShiftPickerProps> = ({
           <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
             Pilih Shift Piket
           </h3>
-          <span className="text-[10px] text-slate-500">Toleransi 15 menit</span>
+          <span className="text-[10px] text-slate-500">
+            Toleransi {TOLERANCE_MINUTES} menit
+          </span>
         </div>
 
         {SHIFT_CONFIGS.map((config) => {
@@ -89,7 +97,7 @@ export const ShiftPicker: React.FC<ShiftPickerProps> = ({
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 ${
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
                     isSelected
                       ? 'bg-white/20 text-white'
                       : status.isAvailable

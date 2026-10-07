@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
@@ -118,12 +118,6 @@ export default function Home() {
     }
   };
 
-  // Verify record (Admin only)
-  const handleVerifyRecord = (id: string) => {
-    const updated = records.map((r) => (r.id === id ? { ...r, verified: true } : r));
-    saveRecords(updated);
-  };
-
   // Add manual record (Admin only)
   const handleAddManualRecord = (record: AttendanceRecord) => {
     const updated = [record, ...records];
@@ -144,8 +138,6 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-ipb-slate text-slate-900 font-sans selection:bg-ipb-blue selection:text-white pb-10">
       {/* Navigation */}
       <Navbar
-        currentTime={currentTime}
-        onOpenGuidance={() => setIsGuidanceOpen(true)}
         onOpenAdmin={() => {
           setCurrentTab('admin');
           window.location.hash = 'admin';
@@ -159,7 +151,7 @@ export default function Home() {
             {/* Layout 2 kolom: panel kontrol kiri (sticky di desktop) + form kanan */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-8 items-start">
               <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:sticky lg:top-24">
-                <HeroBanner currentTime={currentTime} />
+                <HeroBanner />
 
                 <ShiftPicker
                   currentTime={currentTime}
@@ -194,14 +186,13 @@ export default function Home() {
                 <span>&larr;</span>
                 <span>Kembali ke Form Presensi Mahasiswa</span>
               </button>
-              <span className="text-[10px] text-slate-400 font-mono">
-                admin_panel &middot; #admin
+              <span className="text-[10px] text-slate-400 ">
+                Panel Admin &middot; #admin
               </span>
             </div>
             <AdminDashboard
               records={records}
               onDeleteRecord={handleDeleteRecord}
-              onVerifyRecord={handleVerifyRecord}
               onAddManualRecord={handleAddManualRecord}
               isAuthenticated={isAdminAuthenticated}
               gasWebhookUrl={gasWebhookUrl}
