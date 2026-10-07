@@ -16,7 +16,6 @@ Project ini adalah kem independen dari TNK 62 — backend Google Sheets, Drive f
 | Zona waktu | Asia/Jakarta (WIB) — seluruh perhitungan waktu memakai zona ini, bukan zona perangkat |
 | Hosting | Belum ditentukan (target: Vercel) |
 | Akses admin | Klik logo TNK 61 di navbar, atau `/#admin` |
-| Rujukan visual | sv.ipb.ac.id — identitas visual resmi Sekolah Vokasi IPB |
 | Palet warna | Biru IPB `#003882` / `#0047BA`, aksen oranye `#F58220`, latar `#F8FAFC` |
 | Toleransi shift | 10 menit setelah jam shift, seragam di ketiga shift (`TOLERANCE_MINUTES`) |
 | Status backend | **Belum disambung** — `GAS_WEBHOOK_URL` kosong, sheet & Drive belum dibuat |
