@@ -439,7 +439,7 @@ if (!studentName.trim()) {
 value={studentNim}
                   onChange={(e) => setStudentNim(e.target.value)}
                   placeholder="NIM sesuai Kartu Tanda Mahasiswa"
-                  inputMode="numeric"
+                  inputMode="text"
                   autoComplete="off"
                   className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 placeholder:text-slate-500 placeholder:font-sans tabular-nums min-h-[44px]"
                 />

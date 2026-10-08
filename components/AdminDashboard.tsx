@@ -1229,7 +1229,7 @@ const csvContent =
                 <input
                   type="text"
                   required
-                  inputMode="numeric"
+                  inputMode="text"
                   autoComplete="off"
                   value={manualNim}
 onChange={(e) => setManualNim(e.target.value)}
