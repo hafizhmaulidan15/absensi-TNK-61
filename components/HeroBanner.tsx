@@ -11,11 +11,12 @@ const COMMODITY_UNITS = [
   { label: 'Kandang Puyuh' },
   { label: 'Kandang Itik' },
   { label: 'Unit Penelitian' },
+  { label: 'Unit Penetasan' },
 ];
 
 /**
  * Hero Banner — identitas resmi SV IPB untuk angkatan 61.
- * Menampilkan program studi dan tiga unit kerja piket.
+ * Menampilkan program studi dan empat unit kerja piket.
  */
 export const HeroBanner: React.FC<HeroBannerProps> = () => {
   return (
@@ -38,12 +39,12 @@ export const HeroBanner: React.FC<HeroBannerProps> = () => {
 
       <div className="p-4 space-y-3">
         <p className="text-xs text-slate-700 leading-relaxed">
-          Penugasan praktik lapangan mencakup tiga unit kerja di bawah, dikerjakan
+          Penugasan praktik lapangan mencakup empat unit kerja di bawah, dikerjakan
           bergantian pada tiga sesi piket harian dengan bukti foto kamera.
         </p>
 
-        {/* Tiga unit commodity */}
-        <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
+        {/* Empat unit commodity */}
+        <div className="grid grid-cols-2 xs:grid-cols-4 gap-2">
           {COMMODITY_UNITS.map((unit) => (
             <div
               key={unit.label}

@@ -43,6 +43,7 @@ const UNIT_LOCATIONS: Array<{ value: UnitLocation; desc: string }> = [
   { value: 'Kandang Puyuh', desc: 'Unggas petelur & pedaging' },
   { value: 'Kandang Itik', desc: 'Unggas air & kolam' },
   { value: 'Penelitian', desc: 'Eksperimen & riset terapan' },
+  { value: 'Penetasan', desc: 'Mesin tetas & manajemen DOC' },
 ];
 
 export const StudentForm: React.FC<StudentFormProps> = ({
@@ -480,7 +481,7 @@ value={studentNim}
 
         {/* LANGKAH 3: Lokasi Piket */}
         <StepBlock step={3} title="Lokasi Piket" icon={MapPin}>
-          <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
             {UNIT_LOCATIONS.map((loc) => {
               const isSelected = location === loc.value;
               return (

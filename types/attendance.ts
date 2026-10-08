@@ -5,7 +5,8 @@ export type ShiftStatus = 'active' | 'locked' | 'passed';
 export type UnitLocation =
   | 'Kandang Puyuh'
   | 'Kandang Itik'
-  | 'Penelitian';
+  | 'Penelitian'
+  | 'Penetasan';
 
 // Divisi piket sengaja TIDAK punya union type: mahasiswa mengetiknya bebas
 // sebagai teks, supaya divisi baru bisa muncul tanpa mengubah kode.
