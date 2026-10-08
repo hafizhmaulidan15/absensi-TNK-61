@@ -53,7 +53,11 @@ baris data pertamanya akan hilang saat dashboard membaca.
 **Langkah 2 — pasang Code.gs**
 
 Dari spreadsheet itu: **Extensions > Apps Script**, hapus isi `Code.gs` bawaan,
-tempel seluruh isi `Code.gs` project ini, lalu **Save**.
+tempel isi `Code.gs` milik lu, lalu **Save**.
+
+> `Code.gs` **tidak ikut ter-push ke repo** — file itu berisi `SPREADSHEET_ID`
+> angkatan lu, jadi disimpan lokal saja (lihat `.gitignore`). Ambil dari salinan
+> lokal/lu punya, bukan dari GitHub.
 
 **Langkah 3 — tes dulu sebelum deploy**
 
@@ -90,15 +94,13 @@ otomatis tahu spreadsheet mana. Tapi kalau script-nya berdiri sendiri:
 - nama: `SPREADSHEET_ID`
 - nilai: ID dari URL `https://docs.google.com/spreadsheets/d/<ID>/edit`
 
-**ID-nya sudah terisi di `Code.gs`.** Kalau spreadsheet lu diganti, edit
+**ID-nya sudah terisi di `Code.gs` lokal.** Kalau spreadsheet lu diganti, edit
 `var SPREADSHEET_ID` di bagian KONFIGURASI atas, atau isi Script Property dengan
 nama yang sama — Script Property dibaca lebih dulu, jadi tidak perlu edit kode.
 
-> Catatan: karena `Code.gs` ini ada di repo publik, ID spreadsheet lu ikut
-> terpublikasi di situ. ID spreadsheet bukan rahasia seperti password, tapi
-> selama sharing spreadsheet lu tidak "Siapa saja dengan link", orang tetap
-> butuh login dan izin untuk membukanya. Kalau nanti sharing-nya dilepas ke
-> publik, pindahkan ID-nya ke Script Property dan kosongkan variabel di kode.
+> Catatan: `Code.gs` sengaja **tidak** ada di repo publik, jadi ID spreadsheet lu
+> tidak ikut terpublikasi di GitHub. ID spreadsheet sendiri bukan rahasia seperti
+> password, tapi mendingan memang tidak dibagikan.
 
 **Langkah 5 — deploy**
 
@@ -145,18 +147,22 @@ NEXT_PUBLIC_GAS_WEBHOOK_URL=http://localhost:8787/exec
 
 Endpoint bantu: `POST /seed` isi 3 data contoh, `POST /reset` kosongkan.
 
-Logika `Code.gs` sendiri bisa diuji tanpa Google sama sekali:
+Logika `Code.gs` sendiri bisa diuji tanpa Google sama sekali, selama file
+`Code.gs` ada di folder root (file lokal, tidak ikut repo):
 
 ```bash
 npm run test:gas           # 30 tes dengan stub API Apps Script
 ```
+
+Kalau `Code.gs` tidak ada, tes ini gagal baca file — itu memang disengaja,
+bukan bug.
 
 ### Verifikasi
 
 ```bash
 npm run lint
 npm run build
-npm run test:gas      # 30 tes logika Code.gs tanpa perlu Google
+npm run test:gas      # 30 tes logika Code.gs (butuh Code.gs lokal)
 ```
 
 ## Deploy online

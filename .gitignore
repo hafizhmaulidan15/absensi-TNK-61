@@ -5,3 +5,11 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Code.gs tidak masuk repo karena berisi ID spreadsheet angkatan 61.
+# File ini tetap ada di disk (jadi tools/test-code-gs.js tetap bisa jalan),
+# hanya tidak ikut ter-push ke GitHub.
+#
+# Tidak ada yang berubah di Apps Script: script di sana punya salinannya
+# sendiri di server Google, terpisah dari repo ini.
+Code.gs
