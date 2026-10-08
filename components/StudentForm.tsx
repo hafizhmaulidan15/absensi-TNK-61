@@ -205,6 +205,14 @@ if (!studentName.trim()) {
       setSubmitError('NIM wajib diisi sesuai Kartu Tanda Mahasiswa.');
       return;
     }
+    if (!division.trim()) {
+      setSubmitError('Divisi piket wajib diisi.');
+      return;
+    }
+    if (!notes.trim()) {
+      setSubmitError('Deskripsi kegiatan piket wajib diisi.');
+      return;
+    }
     if (!photoDataUrl) {
       setSubmitError('Foto dokumentasi wajib: ambil langsung dari kamera.');
       return;
@@ -227,11 +235,11 @@ if (!studentName.trim()) {
         formattedTime: formatWIBTime(now),
         studentName: studentName.trim(),
         studentNim: studentNim.trim(),
-        division,
+        division: division.trim(),
         shift: selectedShift,
         location,
         photoUrl: photoDataUrl,
-        notes: notes.trim() || 'Piket kandang/laboratorium terlaksana tepat waktu.',
+        notes: notes.trim(),
         status,
         verified: false,
         syncedToDrive: false,
@@ -453,18 +461,21 @@ value={studentNim}
         </StepBlock>
 
 {/* LANGKAH 2: Divisi Piket */}
-        <StepBlock step={2} title="Divisi Piket" icon={Users}>
+        <StepBlock step={2} title="Divisi Piket" icon={Users} required>
           <div className="relative">
             <Users className="w-4 h-4 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
             <input
               type="text"
+              required
               value={division}
               onChange={(e) => setDivision(e.target.value)}
               placeholder="Tuliskan nama divisi piket Anda"
               className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 min-h-[44px]"
             />
           </div>
-          <p className="text-[10px] text-slate-500 mt-1">Opsional. Boleh dikosongkan.</p>
+          <p className="text-[10px] text-slate-500 mt-1">
+            <span className="text-rose-500">*</span> Wajib. Contoh: Divisi Pakan.
+          </p>
         </StepBlock>
 
         {/* LANGKAH 3: Lokasi Piket */}
@@ -600,15 +611,19 @@ value={studentNim}
         </StepBlock>
 
         {/* LANGKAH 5: Deskripsi Kegiatan */}
-        <StepBlock step={5} title="Deskripsi Kegiatan Piket" icon={FileText}>
+        <StepBlock step={5} title="Deskripsi Kegiatan Piket" icon={FileText} required>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            required
             rows={3}
             placeholder="Catat observasi dan pekerjaan yang Anda kerjakan, misalnya: pemberian pakan 12 kg, pengecekan nipple drinker, pengumpulan telur 40 butir."
             className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue bg-white text-slate-900 resize-y"
           />
-          <p className="text-[10px] text-slate-500 mt-1">Opsional. Boleh dikosongkan.</p>
+          <p className="text-[10px] text-slate-500 mt-1">
+            <span className="text-rose-500">*</span> Wajib. Jelaskan pekerjaan yang
+            dilakukan hari ini.
+          </p>
         </StepBlock>
 
         {submitError && (
@@ -653,24 +668,26 @@ const Detail: React.FC<{ label: string; value: string }> = ({ label, value }) =>
 );
 
 /** Pembungkus satu langkah formulir */
-const StepBlock: React.FC<{
-  step: number;
-  title: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-}> = ({ step, title, icon: Icon, children }) => (
-  <section>
-    <div className="flex items-center gap-2 pb-2 mb-2.5 border-b border-slate-200">
-      <span className="w-6 h-6 rounded-lg bg-ipb-blue text-white text-[11px] font-black flex items-center justify-center shrink-0">
-        {step}
-      </span>
-      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-        {Icon ? <Icon className="w-3.5 h-3.5 text-slate-400" /> : null}
-        {title}
-      </h3>
-    </div>
-    {children}
-  </section>
-);
+  const StepBlock: React.FC<{
+    step: number;
+    title: string;
+    icon?: React.ComponentType<{ className?: string }>;
+    required?: boolean;
+    children: React.ReactNode;
+  }> = ({ step, title, icon: Icon, required, children }) => (
+    <section>
+      <div className="flex items-center gap-2 pb-2 mb-2.5 border-b border-slate-200">
+        <span className="w-6 h-6 rounded-lg bg-ipb-blue text-white text-[11px] font-black flex items-center justify-center shrink-0">
+          {step}
+        </span>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+          {Icon ? <Icon className="w-3.5 h-3.5 text-slate-400" /> : null}
+          {title}
+          {required ? <span className="text-rose-500">*</span> : null}
+        </h3>
+      </div>
+      {children}
+    </section>
+  );
 
 export default StudentForm;

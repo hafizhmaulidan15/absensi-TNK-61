@@ -79,6 +79,8 @@ function doPost(contents) {
 
   if (!nama) return { status: 'error', message: 'Nama wajib diisi.' };
   if (!nim) return { status: 'error', message: 'NIM wajib diisi.' };
+  if (!divisi) return { status: 'error', message: 'Divisi piket wajib diisi.' };
+  if (!catatan) return { status: 'error', message: 'Deskripsi kegiatan wajib diisi.' };
   if (!fotoBase64) return { status: 'error', message: 'Foto dokumentasi wajib diisi.' };
   if (waktu && !SHIFT_VALID.includes(waktu))
     return { status: 'error', message: 'Waktu piket tidak dikenal: ' + waktu };

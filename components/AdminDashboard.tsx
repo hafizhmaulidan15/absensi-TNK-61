@@ -373,6 +373,14 @@ const csvContent =
       setManualError('NIM wajib diisi.');
       return;
     }
+    if (!manualDivision.trim()) {
+      setManualError('Divisi piket wajib diisi.');
+      return;
+    }
+    if (!manualNotes.trim()) {
+      setManualError('Catatan keterangan wajib diisi.');
+      return;
+    }
     // Code.gs menolak POST tanpa foto, jadi UI harus menolak lebih dulu.
     // Kalau tidak, fetch mode:'no-cors' tetap "berhasil" dari sisi browser
     // sementara server diam-diam membuang datanya.
@@ -385,7 +393,7 @@ const csvContent =
 
     const now = new Date();
     const status = manualStatus;
-    const catatan = manualNotes.trim() || 'Presensi susulan diinput manual oleh Admin / Dosen.';
+    const catatan = manualNotes.trim();
 
     if (!gasWebhookUrl) {
       setIsSavingManual(false);
@@ -406,7 +414,7 @@ const csvContent =
           timestamp: now.toISOString(),
           namaMahasiswa: manualName.trim(),
           nim: manualNim.trim(),
-          divisi: manualDivision,
+          divisi: manualDivision.trim(),
           waktuPiket: manualShift,
           lokasi: manualLocation,
           status,
@@ -422,7 +430,7 @@ const csvContent =
         formattedTime: formatWIBTime(now),
         studentName: manualName.trim(),
         studentNim: manualNim.trim(),
-        division: manualDivision,
+        division: manualDivision.trim(),
         shift: manualShift,
         location: manualLocation,
         photoUrl: manualPhoto || '',
@@ -1240,10 +1248,11 @@ onChange={(e) => setManualNim(e.target.value)}
 
 <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                  Divisi Piket
+                  Divisi Piket <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
+                  required
                   value={manualDivision}
                   onChange={(e) => setManualDivision(e.target.value)}
                   placeholder="Tuliskan divisi piket"
@@ -1356,10 +1365,11 @@ onChange={(e) => setManualNim(e.target.value)}
 
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-                  Catatan Keterangan
+                  Catatan Keterangan <span className="text-rose-500">*</span>
                 </label>
                 <textarea
                   rows={2}
+                  required
                   value={manualNotes}
                   onChange={(e) => setManualNotes(e.target.value)}
                   placeholder="Alasan input manual oleh koordinator..."

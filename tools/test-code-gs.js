@@ -155,13 +155,21 @@ function t(name, fn) {
   try { fn(); tests.push('OK   ' + name); }
   catch (e) { tests.push('FAIL ' + name + ' -> ' + e.message); }
 }
-// Helper POST. `lokasi` dan `waktuPiket` di-default supaya setiap tes boleh
-// fokus pada satu hal tanpa mengulang boilerplate. Tes yang memang menguji
-// field wajib menimpanya secara eksplisit dengan '' atau menghilangkannya.
+// Helper POST. `lokasi`, `waktuPiket`, `divisi` dan `catatan` di-default supaya
+// setiap tes boleh fokus pada satu hal tanpa mengulang boilerplate. Tes yang
+// memang menguji field wajib menimpanya secara eksplisit dengan '' atau
+// menghilangkannya.
 const post = (obj) => {
-  const payload = Object.assign({ lokasi: 'Kandang Puyuh', waktuPiket: '06.30' }, obj);
+  const payload = Object.assign({
+    lokasi: 'Kandang Puyuh',
+    waktuPiket: '06.30',
+    divisi: 'Divisi Pakan',
+    catatan: 'Pemberian pakan 12 kg',
+  }, obj);
   if (payload.lokasi === undefined) delete payload.lokasi;
   if (payload.waktuPiket === undefined) delete payload.waktuPiket;
+  if (payload.divisi === undefined) delete payload.divisi;
+  if (payload.catatan === undefined) delete payload.catatan;
   return JSON.parse(doPost({ postData: { contents: JSON.stringify(payload) } }).s);
 };
 const reset = () => { SpreadsheetApp._ss._sheets = {}; DriveApp._reset(); };
@@ -182,6 +190,21 @@ t('doPost TOLAK foto kosong', () => {
   reset();
   const r = post({ namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', fotoBase64: '' });
   if (r.status !== 'error' || !/Foto/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK divisi kosong', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', divisi: '', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/Divisi/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK catatan kosong', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', catatan: '', fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/Deskripsi/.test(r.message)) throw new Error(JSON.stringify(r));
+});
+t('doPost TOLAK divisi & catatan hilang dari payload', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', divisi: undefined, catatan: undefined, fotoBase64: 'data:image/jpeg;base64,AA' });
+  if (r.status !== 'error' || !/Divisi/.test(r.message)) throw new Error(JSON.stringify(r));
 });
 t('doPost TOLAK shift kosong', () => {
   reset();
