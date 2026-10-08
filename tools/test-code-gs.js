@@ -1,5 +1,6 @@
 // Harness: menjalankan Code.gs dengan stub API Google Apps Script.
-// Tidak ada stub DriveApp karena Code.gs sudah tidak memakai Drive sama sekali.
+// DriveApp di-stub supaya tes bisa memastikan foto benar-benar dipanggilkan
+// ke Drive tanpa menyentuh Google sungguhan.
 global.SpreadsheetApp = {
   _ss: null,
   // Apps Script sungguhan mengembalikan null untuk script yang tidak bound,
@@ -30,6 +31,45 @@ global.Utilities = {
     // stub sederhana: cukup menghasilkan 6 digit
     return '001122';
   },
+  base64Decode(s) {
+    // Dipanggil setelah prefix data URL dibuang. Asersi di sini supaya
+    // prosesnya tidak senyap: kalau Code.gs salah memotong prefix, Buffer
+    // akan melempar dan tes gagal dengan jelas.
+    if (/[^A-Za-z0-9+/=]/.test(s)) throw new Error('bukan base64 bersih: ' + s.slice(0, 40));
+    return Buffer.from(s, 'base64');
+  },
+  newBlob(bytes, mime, name) {
+    return { _bytes: bytes, _mime: mime, _name: name };
+  },
+};
+
+// Stub Drive. Kalau Code.gs memanggilnya, file tercatat di _files sehingga
+// tes bisa memeriksa nama & isi file yang benar-benar "diupload".
+global.DriveApp = {
+  _folders: {},
+  _files: [],
+  getFolderById(id) {
+    if (!this._folders[id]) throw new Error('Folder tidak ditemukan: ' + id);
+    return {
+      _id: id,
+      getName() { return 'Folder Foto TNK 61'; },
+      getUrl() { return 'https://drive.google.com/drive/folders/' + id; },
+      createFile(blob) {
+        const file = {
+          _name: blob._name,
+          _size: blob._bytes ? blob._bytes.length : 0,
+          _mime: blob._mime,
+          _trashed: false,
+          getUrl() { return 'https://drive.google.com/file/d/' + this._name; },
+          setTrashed(v) { this._trashed = v; return this; },
+        };
+        DriveApp._files.push(file);
+        return file;
+      },
+    };
+  },
+  // Dipakai testSetup untuk menulis file tes.
+  _reset() { this._files = []; },
 };
 global.ContentService = {
   createTextOutput(s) {
@@ -57,6 +97,11 @@ eval(src);
 // gagal dengan "Spreadsheet tidak ditemukan" sebelum masuk ke logika yang
 // sebenarnya diuji.
 SpreadsheetApp._knownIds.push(String(SPREADSHEET_ID).trim());
+
+// Sama untuk folder foto: daftarkan FOLDER_ID dari kode sebagai folder yang
+// ada, supaya tes referensi foto tidak berhenti di "Folder tidak ditemukan".
+const FOLDER_ID_KODE = String(FOLDER_ID || '').trim();
+if (FOLDER_ID_KODE) DriveApp._folders[FOLDER_ID_KODE] = true;
 
 function makeSheet(name, row1) {
   const self = {
@@ -119,7 +164,7 @@ const post = (obj) => {
   if (payload.waktuPiket === undefined) delete payload.waktuPiket;
   return JSON.parse(doPost({ postData: { contents: JSON.stringify(payload) } }).s);
 };
-const reset = () => { SpreadsheetApp._ss._sheets = {}; };
+const reset = () => { SpreadsheetApp._ss._sheets = {}; DriveApp._reset(); };
 const rows = () => SpreadsheetApp._ss._sheets['data_absen61']._v;
 
 // ============ WAJIB: nama, NIM, foto ============
@@ -279,13 +324,93 @@ t('doGet: baris kosong dilewati', () => {
   if (r.total !== 1) throw new Error('total=' + r.total);
 });
 
-// ============ tidak ada Drive sama sekali ============
-t('Code.gs tidak menyentuh Drive sama sekali', () => {
-  const src = fs.readFileSync('Code.gs', 'utf8');
-  const pCode = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
-  ['DriveApp', 'FOLDER_ID', 'createFile', 'newBlob', 'base64Decode', 'setSharing'].forEach((token) => {
-    if (pCode.includes(token)) throw new Error('masih ada: ' + token);
-  });
+// ============ referensi foto TETAP ada file di Drive ============
+t('foto mahasiswa: ref ditulis ke sheet DAN file masuk Drive', () => {
+  reset();
+  const r = post({ namaMahasiswa: 'Budi Santoso', nim: 'J0301211099', waktuPiket: '06.30', lokasi: 'Kandang Puyuh', fotoBase64: 'data:image/jpeg;base64,QUJD' });
+  if (r.status !== 'success') throw new Error(JSON.stringify(r));
+  if (r.fotoTerupload !== true) throw new Error('respons bilang tidak terupload');
+  if (DriveApp._files.length !== 1) throw new Error('file Drive = ' + DriveApp._files.length);
+  const f = DriveApp._files[0];
+  // Nama file Drive harus persis isi kolom Referensi Foto tanpa prefix "[FILE] ".
+  const refTanpaPrefix = rows()[1][8].replace(/^\[FILE\] /, '');
+  if (f._name !== refTanpaPrefix) throw new Error('nama file: ' + f._name + ' vs ref: ' + refTanpaPrefix);
+  if (f._mime !== 'image/jpeg') throw new Error('mime: ' + f._mime);
+  if (f._size === 0) throw new Error('file kosong');
+  if (f._trashed) throw new Error('file langsung dibuang');
+  if (!r.urlFoto) throw new Error('respons tidak punya urlFoto');
+});
+t('foto manual: file juga masuk Drive, nama diawali MANUAL_', () => {
+  reset();
+  const r = post({ action: 'submitManualAttendance', namaMahasiswa: 'Siti Nurhaliza', nim: 'J1', waktuPiket: '12.00', status: 'Izin', fotoBase64: 'data:image/png;base64,QUJD' });
+  if (r.status !== 'success') throw new Error(JSON.stringify(r));
+  if (DriveApp._files.length !== 1) throw new Error('file Drive = ' + DriveApp._files.length);
+  if (!/^MANUAL_/.test(DriveApp._files[0]._name)) throw new Error('nama: ' + DriveApp._files[0]._name);
+  if (DriveApp._files[0]._mime !== 'image/png') throw new Error('mime: ' + DriveApp._files[0]._mime);
+});
+t('prefix data URL dipotong, isi file bukan teks base64', () => {
+  reset();
+  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '16.00', fotoBase64: 'data:image/jpeg;base64,QUJD' });
+  // 'QUJD' = 'ABC'. Kalau prefix tidak dipotong, base64Decode akan melempar
+  // dan file tidak akan ada sama sekali.
+  if (DriveApp._files[0]._size !== 3) throw new Error('size: ' + DriveApp._files[0]._size);
+});
+t('FOLDER_ID kosong: presensi TETAP berhasil, file tidak diupload', () => {
+  reset();
+  const asli = FOLDER_ID;
+  try {
+    FOLDER_ID = '';
+    const r = post({ namaMahasiswa: 'Tanpa Folder', nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,QUJD' });
+    if (r.status !== 'success') throw new Error('harus tetap sukses: ' + JSON.stringify(r));
+    if (r.fotoTerupload !== false) throw new Error('harus bilang tidak terupload');
+    if (DriveApp._files.length !== 0) throw new Error('file tetap dibuat');
+    if (!/^\[FILE\] /.test(rows()[1][8])) throw new Error('ref hilang: ' + rows()[1][8]);
+  } finally {
+    FOLDER_ID = asli;
+    delete PropertiesService._p.FOLDER_ID;
+  }
+});
+t('folder tidak ditemukan: presensi TETAP berhasil, ref tetap terisi', () => {
+  reset();
+  delete DriveApp._folders[FOLDER_ID_KODE];
+  try {
+    const r = post({ namaMahasiswa: 'Folder Salah', nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,QUJD' });
+    if (r.status !== 'success') throw new Error('harus tetap sukses: ' + JSON.stringify(r));
+    if (r.fotoTerupload !== false) throw new Error('harus bilang tidak terupload');
+    if (!/^\[FILE\] Folder_Salah_0630_\d{6}\.jpg$/.test(rows()[1][8])) throw new Error('ref: ' + rows()[1][8]);
+  } finally {
+    DriveApp._folders[FOLDER_ID_KODE] = true;
+  }
+});
+t('tanpa foto tidak memanggil Drive sama sekali', () => {
+  reset();
+  // fotoBase64 kosong sudah ditolak validasi, jadi tidak ada jalur upload.
+  const r = post({ namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', fotoBase64: '' });
+  if (r.status !== 'error') throw new Error(JSON.stringify(r));
+  if (DriveApp._files.length !== 0) throw new Error('ada file yang dibuat');
+});
+t('FOLDER_ID ada di konfigurasi (bukan kosong)', () => {
+  if (!FOLDER_ID_KODE) throw new Error('FOLDER_ID kosong di kode');
+  if (!/^[A-Za-z0-9_-]{20,}$/.test(FOLDER_ID_KODE)) throw new Error('format ID aneh: ' + FOLDER_ID_KODE);
+});
+t('Script Property FOLDER_ID menang atas variabel di kode', () => {
+  const alt = 'FOLDER-ID-DARI-PROPERTY';
+  DriveApp._folders[alt] = true;
+  PropertiesService._p.FOLDER_ID = alt;
+  try {
+    if (getFolderId_() !== alt) throw new Error('tidak mengambil dari Script Property');
+    reset();
+    post({ namaMahasiswa: 'Dari Property', nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,QUJD' });
+    if (DriveApp._files[0]._name.indexOf('Dari_Property') !== 0) throw new Error('nama: ' + DriveApp._files[0]._name);
+  } finally {
+    delete PropertiesService._p.FOLDER_ID;
+    delete DriveApp._folders[alt];
+  }
+});
+t('testSetup: cek folder foto tanpa melempar error', () => {
+  reset();
+  // SpreadsheetApp.getUi().alert sudah di-stub; fungsi ini harus selesai.
+  testSetup();
 });
 
 // ============ resolution spreadsheet ============

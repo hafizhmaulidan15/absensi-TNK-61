@@ -13,3 +13,5 @@ coverage/
 # Tidak ada yang berubah di Apps Script: script di sana punya salinannya
 # sendiri di server Google, terpisah dari repo ini.
 Code.gs
+
+.vercel
