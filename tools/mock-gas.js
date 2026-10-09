@@ -29,7 +29,7 @@ const TAG_MANUAL_NOTE = '[INPUT MANUAL]';
 const TAG_MANUAL_FILE = 'MANUAL_';
 const STATUS_MANUAL = ['Tepat Waktu', 'Terlambat', 'Toleransi', 'Izin', 'Tidak Hadir'];
 const SHIFT_VALID = ['06.30', '12.00', '16.00'];
-const LOKASI_VALID = ['Kandang Puyuh', 'Kandang Itik', 'Penelitian', 'Penetasan'];
+const LOKASI_VALID = ['Kandang Puyuh', 'Kandang Itik', 'Penelitian'];
 
 // Baris pretending-seperti spreadsheet, header dulu
 let sheet = [HEADERS.slice()];

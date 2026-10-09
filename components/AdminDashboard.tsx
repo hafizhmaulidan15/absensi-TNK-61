@@ -28,7 +28,7 @@ import {
   Database,
 } from 'lucide-react';
 
-const LOCATIONS: UnitLocation[] = ['Kandang Puyuh', 'Kandang Itik', 'Penelitian', 'Penetasan'];
+const LOCATIONS: UnitLocation[] = ['Kandang Puyuh', 'Kandang Itik', 'Penelitian'];
 
 /** Kartu sebaran (bar proporsional) */
 const BreakdownCard: React.FC<{

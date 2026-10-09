@@ -266,20 +266,6 @@ t('doPost TOLAK lokasi manual ngawur', () => {
   const r = post({ action: 'submitManualAttendance', namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', lokasi: 'Kandang Ayam', fotoBase64: 'data:image/jpeg;base64,AA' });
   if (r.status !== 'error') throw new Error(JSON.stringify(r));
 });
-t('doPost TERIMA lokasi Penetasan (mahasiswa)', () => {
-  reset();
-  const r = post({ namaMahasiswa: 'A', nim: 'J1', waktuPiket: '06.30', lokasi: 'Penetasan', fotoBase64: 'data:image/jpeg;base64,AA' });
-  if (r.status !== 'success') throw new Error(JSON.stringify(r));
-  const row = rows()[1];
-  if (row[5] !== 'Penetasan') throw new Error('lokasi: ' + row[5]);
-});
-t('doPost TERIMA lokasi Penetasan (manual)', () => {
-  reset();
-  const r = post({ action: 'submitManualAttendance', namaMahasiswa: 'A', nim: 'J1', waktuPiket: '16.00', lokasi: 'Penetasan', catatan: 'Cek suhu mesin tetas', fotoBase64: 'data:image/png;base64,BB' });
-  if (r.status !== 'success') throw new Error(JSON.stringify(r));
-  const row = rows()[1];
-  if (row[5] !== 'Penetasan') throw new Error('lokasi: ' + row[5]);
-});
 
 // ============ referensi foto (TANPA Drive) ============
 t('mahasiswa: 9 kolom + ref tanpa awalan MANUAL_', () => {
