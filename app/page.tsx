@@ -9,7 +9,7 @@ import { AdminDashboard } from '@/components/AdminDashboard';
 import { GuidanceModal } from '@/components/GuidanceModal';
 import { AttendanceRecord, PiketShift } from '@/types/attendance';
 import { INITIAL_RECORDS } from '@/lib/sampleData';
-import { getWIBTimeParts } from '@/lib/timeUtils';
+import { pickDefaultShift } from '@/lib/timeUtils';
 
 const STORAGE_KEY = 'tnk61_attendance_records_v1';
 
@@ -67,13 +67,9 @@ export default function Home() {
         }
 
         // Auto pick closest shift based on current hour in WIB
-        const { hours: h } = getWIBTimeParts(new Date());
-        if (h >= 6 && h < 12) {
-          setSelectedShift('06.30');
-        } else if (h >= 12 && h < 16) {
-          setSelectedShift('12.00');
-        } else if (h >= 16 && h < 21) {
-          setSelectedShift('16.00');
+        const autoShift = pickDefaultShift(new Date());
+        if (autoShift) {
+          setSelectedShift(autoShift);
         }
 
         // Check if URL hash is #admin

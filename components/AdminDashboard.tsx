@@ -4,9 +4,10 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   AttendanceRecord,
   PiketShift,
+  StoredShift,
   UnitLocation,
 } from '@/types/attendance';
-import { formatWIBDate, formatWIBTime } from '@/lib/timeUtils';
+import { formatWIBDate, formatWIBTime, isSoreShift } from '@/lib/timeUtils';
 import {
   ShieldCheck,
   Lock,
@@ -24,7 +25,6 @@ import {
   PlusCircle,
   AlertCircle,
   X,
-  ExternalLink,
   Database,
 } from 'lucide-react';
 
@@ -173,7 +173,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             studentName: row.nama || '',
             studentNim: row.nim || '',
             division: row.divisi || '',
-            shift: (row.shift || '06.30') as PiketShift,
+            shift: (row.shift || '06.30') as StoredShift,
             location: (row.lokasi || 'Kandang Puyuh') as UnitLocation,
             // Code.gs mengirim refFoto; urlFoto dipertahankan sebagai mirror
             // supaya data lama dari format sebelumnya tetap terbaca.
@@ -288,7 +288,14 @@ const [manualNim, setManualNim] = useState('');
       }
 
 // Shift Filter
-      if (shiftFilter !== 'all' && rec.shift !== shiftFilter) return false;
+      if (shiftFilter !== 'all') {
+        // Opsi Sore menangkap kode baru (15.30) sekaligus kode lama (16.00)
+        if (shiftFilter === '15.30') {
+          if (!isSoreShift(rec.shift)) return false;
+        } else if (rec.shift !== shiftFilter) {
+          return false;
+        }
+      }
 
       return true;
     });
@@ -302,9 +309,10 @@ const [manualNim, setManualNim] = useState('');
     // Tanpa data, tampilkan "—" supaya tidak terLihat seperti accomplishments 100%
     const tepatWaktuPct = total > 0 ? Math.round((tepatWaktuCount / total) * 100) : null;
 
-const pagi = rows.filter((r) => r.shift === '06.30').length;
+    const pagi = rows.filter((r) => r.shift === '06.30').length;
     const siang = rows.filter((r) => r.shift === '12.00').length;
-    const sore = rows.filter((r) => r.shift === '16.00').length;
+    // Sore: kode baru 15.30 + kode lama 16.00 supaya data historis tetap terhitung
+    const sore = rows.filter((r) => isSoreShift(r.shift)).length;
 
     return { total, todayCount, tepatWaktuPct, pagi, siang, sore };
   }, [rows]);
@@ -751,7 +759,7 @@ const csvContent =
                   items={[
                     { label: 'Pagi 06.30', value: stats.pagi, bar: 'bg-blue-400' },
                     { label: 'Siang 12.00', value: stats.siang, bar: 'bg-ipb-orange' },
-                    { label: 'Sore 16.00', value: stats.sore, bar: 'bg-purple-400' },
+                    { label: 'Sore 15.30', value: stats.sore, bar: 'bg-purple-400' },
                   ]}
                 />
               </div>
@@ -869,13 +877,13 @@ const csvContent =
           <div className="md:col-span-3 flex items-center gap-2">
 <select
               value={shiftFilter}
-              onChange={(e) => setShiftFilter(e.target.value as any)}
+              onChange={(e) => setShiftFilter(e.target.value as 'all' | PiketShift)}
               className="w-full px-3 py-2 rounded-lg bg-white border border-slate-300 text-xs sm:text-sm focus:outline-hidden focus:ring-2 focus:ring-ipb-blue focus:border-ipb-blue text-slate-900 "
             >
               <option value="all">Semua Shift</option>
               <option value="06.30">06.30 (Pagi)</option>
               <option value="12.00">12.00 (Siang)</option>
-              <option value="16.00">16.00 (Sore)</option>
+              <option value="15.30">15.30 (Sore)</option>
             </select>
           </div>
 
@@ -1272,7 +1280,7 @@ onChange={(e) => setManualNim(e.target.value)}
                   >
                     <option value="06.30">06.30 (Pagi)</option>
                     <option value="12.00">12.00 (Siang)</option>
-                    <option value="16.00">16.00 (Sore)</option>
+                    <option value="15.30">15.30 (Sore)</option>
                   </select>
                 </div>
 

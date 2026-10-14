@@ -390,6 +390,36 @@ Perbaikan: pemasangan stream dipindah ke `useEffect` yang bergantung pada `[isCa
 
 ---
 
+## Perubahan — Shift Sore jadi 15.30
+
+Shift Sore dimajukan dari `16.00` ke `15.30` agar sesi sore bisa diisi lebih awal. Kode shift kanonik sekarang `15.30`; kode lama `16.00` tetap dibaca untuk data historis.
+
+### Yang berubah
+
+- `types/attendance.ts` — `PiketShift = '06.30' | '12.00' | '15.30'`; tambah `LEGACY_SORE_SHIFT = '16.00'` dan `StoredShift` (kanonik + legacy) yang dipakai `AttendanceRecord.shift` supaya data historis jujur secara tipe
+- `lib/timeUtils.ts` — konfigurasi Sore: buka `15.30`, toleransi `15.40`; helper `isSoreShift()` (menangkap `15.30` + `16.00`); jendela bersambung: Pagi 06.00–11.59, Siang 12.00–15.29, Sore 15.30–21.00; tambah `pickDefaultShift()` agar pemilihan shift default memakai satu sumber dengan `SHIFT_WINDOWS`
+- `app/page.tsx` — auto pilih shift pakai `pickDefaultShift()` (batas 15.30, konsisten dengan jendela)
+- `components/AdminDashboard.tsx` — statistik & filter Sore menghitung `15.30` dan `16.00`; opsi dropdown (filter & input manual) jadi `15.30 (Sore)`
+- `components/GuidanceModal.tsx` — teks jadwal diselaraskan ke 15.30–21.00
+- `Code.gs` & `tools/mock-gas.js` — `SHIFT_VALID` jadi `['06.30', '12.00', '15.30']`
+- `tools/test-code-gs.js` — fixture `16.00` diganti `15.30`
+
+### Deep clean (bersamaan)
+
+- `types/attendance.ts` — buang tipe mati `ShiftStatus` (tidak pernah dipakai)
+- `components/AdminDashboard.tsx` — buang impor tak terpakai `ExternalLink`; ganti `as any` jadi `as 'all' | PiketShift`
+- `lib/timeUtils.ts` — `calculateAttendanceStatus` return type dibuang `'Toleransi'` (tidak pernah dikembalikan); fallback `getWIBTimeParts` dihitung dari UTC+7, bukan jam lokal perangkat
+
+### ⚠️ Catatan deployment backend
+
+`Code.gs` **tidak** ikut repo (gitignored, lihat `.gitignore`). Salinan yang benar-benar jalan ada di server Google Apps Script. Setelah perubahan ini, `SHIFT_VALID` di Apps Script **harus** diubah manual ke `['06.30', '12.00', '15.30']` lalu deploy ulang — kalau tidak, submit shift `15.30` akan ditolak backend dengan "Waktu piket tidak dikenal".
+
+### Kompatibilitas data lama
+
+Baris lama dengan kode `16.00` tetap tampil apa adanya di tabel, tetap dihitung di statistik Sore, dan tetap muncul saat filter "Sore" dipilih. Tidak ada migrasi data yang perlu dijalankan.
+
+---
+
 ## Verifikasi yang Sudah Dijalankan
 
 | Perintah | Hasil |

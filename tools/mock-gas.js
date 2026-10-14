@@ -28,7 +28,7 @@ const HEADERS = [
 const TAG_MANUAL_NOTE = '[INPUT MANUAL]';
 const TAG_MANUAL_FILE = 'MANUAL_';
 const STATUS_MANUAL = ['Tepat Waktu', 'Terlambat', 'Toleransi', 'Izin', 'Tidak Hadir'];
-const SHIFT_VALID = ['06.30', '12.00', '16.00'];
+const SHIFT_VALID = ['06.30', '12.00', '15.30'];
 const LOKASI_VALID = ['Kandang Puyuh', 'Kandang Itik', 'Penelitian'];
 
 // Baris pretending-seperti spreadsheet, header dulu
@@ -183,7 +183,7 @@ const server = http.createServer((req, res) => {
     const samples = [
       { action: 'submitAttendance', namaMahasiswa: 'Ahmad Fauzi Rahman', nim: 'J0301211015', divisi: 'Divisi Unggas (Puyuh & Itik)', waktuPiket: '06.30', lokasi: 'Kandang Puyuh', status: 'Tepat Waktu', catatan: 'Pemberian pakan 12kg.', fotoBase64: 'data:image/jpeg;base64,SEED' },
       { action: 'submitAttendance', namaMahasiswa: 'Siti Nurhaliza Azzahra', nim: 'J0301211042', divisi: 'Divisi Sanitasi & Kebersihan', waktuPiket: '12.00', lokasi: 'Kandang Itik', status: 'Terlambat', catatan: 'Sanasi kolam genangan.', fotoBase64: 'data:image/jpeg;base64,SEED' },
-      { action: 'submitManualAttendance', namaMahasiswa: 'Dewi Sartika Lestari', nim: 'J0301211102', divisi: 'Divisi Pakan & Nutrisi Ternak', waktuPiket: '16.00', lokasi: 'Penelitian', status: 'Izin', catatan: 'Dispensasi koordinator.', fotoBase64: 'data:image/jpeg;base64,SEED' },
+      { action: 'submitManualAttendance', namaMahasiswa: 'Dewi Sartika Lestari', nim: 'J0301211102', divisi: 'Divisi Pakan & Nutrisi Ternak', waktuPiket: '15.30', lokasi: 'Penelitian', status: 'Izin', catatan: 'Dispensasi koordinator.', fotoBase64: 'data:image/jpeg;base64,SEED' },
     ];
     const results = samples.map((s) => doPost(JSON.stringify(s)));
     res.writeHead(200, { ...cors, 'Content-Type': 'application/json' });

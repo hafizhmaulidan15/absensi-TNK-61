@@ -69,7 +69,7 @@ export const GuidanceModal: React.FC<GuidanceModalProps> = ({ isOpen, onClose })
             </h4>
 <p className="text-slate-600 text-xs leading-relaxed">
               Presensi tiap shift hanya bisa diisi pada jamnya: Pagi 06.00&ndash;11.59, Siang
-              12.00&ndash;15.59, Sore 16.00&ndash;21.00 WIB. Toleransi keterlambatan seragam{' '}
+              12.00&ndash;15.29, Sore 15.30&ndash;21.00 WIB. Toleransi keterlambatan seragam{' '}
               <strong>{TOLERANCE_MINUTES} menit</strong> setelah jam shift; lewat itu masih
               boleh diisi tetapi dicatat Terlambat.
             </p>

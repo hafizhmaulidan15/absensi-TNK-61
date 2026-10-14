@@ -80,7 +80,7 @@ Didefinisikan di blok `@theme` Tailwind v4, dipakai sebagai kelas `bg-ipb-blue`,
 | :--- | :--- | :--- | :--- |
 | `06.30` | 06.30 WIB | Piket Pagi | 06.40 WIB |
 | `12.00` | 12.00 WIB | Piket Siang | 12.10 WIB |
-| `16.00` | 16.00 WIB | Piket Sore | 16.10 WIB |
+| `15.30` | 15.30 WIB | Piket Sore | 15.40 WIB |
 
 Nilai toleransi diatur satu konstanta `TOLERANCE_MINUTES = 10` di `lib/timeUtils.ts`, dipakai bersama oleh tiga shift, teks modal SOP, dan widget shift picker.
 
@@ -91,10 +91,12 @@ Setiap shift hanya bisa diisi di rentang jamnya. Di luar itu, kartu shift menamp
 | Shift | Bisa diisi |
 | :--- | :--- |
 | Pagi | 06.00 – 11.59 WIB |
-| Siang | 12.00 – 15.59 WIB |
-| Sore | 16.00 – 21.00 WIB |
+| Siang | 12.00 – 15.29 WIB |
+| Sore | 15.30 – 21.00 WIB |
 
 Di luar semua jendela (21.00 – 06.00), **tidak ada** shift yang bisa diisi.
+
+> Kode shift Sore lama `16.00` masih muncul di data historis. Dashboard tetap menghitungnya sebagai Sore (statistik & filter "Sore" menangkap `15.30` maupun `16.00`).
 
 ### 4.3 Toleransi dan Status
 
@@ -190,7 +192,7 @@ Layout **2 kolom side-by-side** di desktop, susun ke bawah di mobile.
 | Fungsi lain | Detail |
 | :--- | :--- |
 | Jam live | Jam WIB di navbar, update tiap 1 detik |
-| Auto pilih shift | Jam 06–12 → Pagi, 12–16 → Siang, 16–21 → Sore |
+| Auto pilih shift | Jam 06–12 → Pagi, 12.00–15.29 → Siang, 15.30–21 → Sore |
 | Validasi | Nama wajib, NIM wajib, foto wajib, shift harus tidak terkunci |
 | Submit | Kirim ke GAS, tampilkan kartu hasil lengkap |
 | Reset form | Otomatis kosong setelah submit sukses |
@@ -261,7 +263,7 @@ Header baris 1 **wajib** ada:
 | B | Nama Mahasiswa | String |
 | C | NIM | String |
 | D | Divisi Piket | String bebas (diisi mahasiswa) |
-| E | Waktu Piket | `06.30` / `12.00` / `16.00` |
+| E | Waktu Piket | `06.30` / `12.00` / `15.30` |
 | F | Lokasi | `Kandang Puyuh` / `Kandang Itik` / `Penelitian` |
 | G | Status | `Tepat Waktu` / `Terlambat` / `Toleransi` |
 | H | Catatan | String |
@@ -272,7 +274,7 @@ Header baris 1 **wajib** ada:
 ### 6.2 Tipe TypeScript (`types/attendance.ts`)
 
 ```ts
-PiketShift  = '06.30' | '12.00' | '16.00'
+PiketShift  = '06.30' | '12.00' | '15.30'   // '16.00' tetap dibaca sebagai legacy
 UnitLocation = 'Kandang Puyuh' | 'Kandang Itik' | 'Penelitian'
 PiketDivision = 6 nilai tetap
 
@@ -294,7 +296,7 @@ AttendanceRecord {
   "namaMahasiswa": "...",
   "nim": "J0301211045",
   "divisi": "Divisi Unggas (Puyuh & Itik)",
-  "waktuPiket": "16.00",
+  "waktuPiket": "15.30",
   "lokasi": "Kandang Itik",
   "status": "Tepat Waktu",
   "catatan": "...",
@@ -309,7 +311,7 @@ AttendanceRecord {
   "status": "success",
   "data": [
     { "timestamp": "...", "tanggal": "07/10/2026", "waktu": "16:10:35",
-      "nama": "...", "nim": "...", "divisi": "...", "shift": "16.00", "lokasi": "...",
+      "nama": "...", "nim": "...", "divisi": "...", "shift": "15.30", "lokasi": "...",
       "status": "...", "catatan": "...", "urlFoto": "..." }
   ]
 }

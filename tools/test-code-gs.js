@@ -288,12 +288,12 @@ t('manual: [INPUT MANUAL] + awalan MANUAL_', () => {
 });
 t('ext jpeg dinormalkan jadi jpg', () => {
   reset();
-  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '16.00', fotoBase64: 'data:image/jpeg;base64,AA' });
+  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '15.30', fotoBase64: 'data:image/jpeg;base64,AA' });
   if (!/\.jpg$/.test(rows()[1][8])) throw new Error('ext: ' + rows()[1][8]);
 });
 t('ext webp dipertahankan', () => {
   reset();
-  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '16.00', fotoBase64: 'data:image/webp;base64,AA' });
+  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '15.30', fotoBase64: 'data:image/webp;base64,AA' });
   if (!/\.webp$/.test(rows()[1][8])) throw new Error('ext: ' + rows()[1][8]);
 });
 t('nama dengan spasi jadi underscore, tanpa karakter aneh', () => {
@@ -328,7 +328,7 @@ t('header lama tidak ditimpa', () => {
 t('doGet: terbaru di atas, refFoto + manual flag', () => {
   reset();
   post({ namaMahasiswa: 'Pertama', nim: 'J1', waktuPiket: '06.30', fotoBase64: 'data:image/jpeg;base64,AA' });
-  post({ action: 'submitManualAttendance', namaMahasiswa: 'Kedua', nim: 'J2', waktuPiket: '16.00', status: 'Tidak Hadir', fotoBase64: 'data:image/jpeg;base64,BB' });
+  post({ action: 'submitManualAttendance', namaMahasiswa: 'Kedua', nim: 'J2', waktuPiket: '15.30', status: 'Tidak Hadir', fotoBase64: 'data:image/jpeg;base64,BB' });
   const r = JSON.parse(doGet().s);
   if (r.status !== 'success') throw new Error(JSON.stringify(r));
   if (r.total !== 2) throw new Error('total=' + r.total);
@@ -373,7 +373,7 @@ t('foto manual: file juga masuk Drive, nama diawali MANUAL_', () => {
 });
 t('prefix data URL dipotong, isi file bukan teks base64', () => {
   reset();
-  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '16.00', fotoBase64: 'data:image/jpeg;base64,QUJD' });
+  post({ namaMahasiswa: 'X Y', nim: 'J1', waktuPiket: '15.30', fotoBase64: 'data:image/jpeg;base64,QUJD' });
   // 'QUJD' = 'ABC'. Kalau prefix tidak dipotong, base64Decode akan melempar
   // dan file tidak akan ada sama sekali.
   if (DriveApp._files[0]._size !== 3) throw new Error('size: ' + DriveApp._files[0]._size);

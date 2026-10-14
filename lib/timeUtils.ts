@@ -1,7 +1,15 @@
-﻿import { PiketShift, ShiftInfo } from '@/types/attendance';
+﻿import { LEGACY_SORE_SHIFT, PiketShift, ShiftInfo } from '@/types/attendance';
 
 /** Toleransi keterlambatan: seragam 10 menit untuk ketiga shift */
 export const TOLERANCE_MINUTES = 10;
+
+/**
+ * True kalau sebuah kode shift termasuk Sore, baik kode baru (15.30) maupun
+ * kode lama (16.00) yang masih tersimpan di data historis.
+ */
+export function isSoreShift(shift: string): boolean {
+  return shift === '15.30' || shift === LEGACY_SORE_SHIFT;
+}
 
 export const SHIFT_CONFIGS: ShiftInfo[] = [
   {
@@ -25,25 +33,42 @@ export const SHIFT_CONFIGS: ShiftInfo[] = [
     description: 'Pengecekan air minum ternak, ventilasi kandang, dan pakan hijauan.',
   },
   {
-    shift: '16.00',
+    shift: '15.30',
     name: 'Piket Sore',
-    timeRange: `16.00 - 16.10 WIB (Maks ${TOLERANCE_MINUTES} Menit)`,
-    openHour: 16,
-    openMinute: 0,
-    closeHour: 16,
-    closeMinute: 10,
+    timeRange: `15.30 - 15.40 WIB (Maks ${TOLERANCE_MINUTES} Menit)`,
+    openHour: 15,
+    openMinute: 30,
+    closeHour: 15,
+    closeMinute: 40,
     description: 'Pemberian pakan sore, kontrol brooding/kandang, dan penutupan tirai.',
   },
 ];
 
 /**
  * Jendela pengisian per shift (WIB). Di luar rentang ini form terkunci total.
+ * Jendela dibuat bersambung tanpa tumpang tindih supaya pada satu waktu hanya
+ * ada satu shift yang bisa diisi.
  */
 const SHIFT_WINDOWS: Record<PiketShift, [number, number]> = {
   '06.30': [6 * 60, 11 * 60 + 59],
-  '12.00': [12 * 60, 15 * 60 + 59],
-  '16.00': [16 * 60, 21 * 60],
+  '12.00': [12 * 60, 15 * 60 + 29],
+  '15.30': [15 * 60 + 30, 21 * 60],
 };
+
+/**
+ * Shift yang jendela pengisiannya sedang aktif pada waktu tertentu (WIB), atau
+ * `null` kalau di luar semua jendela. Satu sumber kebenaran bersama
+ * `SHIFT_WINDOWS`, sehingga pilihan default form selalu sesuai ketersediaan.
+ */
+export function pickDefaultShift(currentTime: Date): PiketShift | null {
+  const { hours, minutes } = getWIBTimeParts(currentTime);
+  const total = hours * 60 + minutes;
+  for (const config of SHIFT_CONFIGS) {
+    const [start, end] = SHIFT_WINDOWS[config.shift];
+    if (total >= start && total <= end) return config.shift;
+  }
+  return null;
+}
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
@@ -72,10 +97,13 @@ export function getWIBTimeParts(date: Date): { hours: number; minutes: number; s
 
     return { hours, minutes, seconds };
   } catch {
+    // Fallback: hitung WIB (UTC+7) dari waktu UTC, bukan jam lokal perangkat,
+    // supaya hasilnya tetap benar kalau Intl tidak tersedia.
+    const wib = new Date(date.getTime() + 7 * 3600 * 1000);
     return {
-      hours: date.getHours(),
-      minutes: date.getMinutes(),
-      seconds: date.getSeconds(),
+      hours: wib.getUTCHours(),
+      minutes: wib.getUTCMinutes(),
+      seconds: wib.getUTCSeconds(),
     };
   }
 }
@@ -225,7 +253,7 @@ export function formatWIBDate(date: Date): string {
 export function calculateAttendanceStatus(
   shift: PiketShift,
   time: Date
-): 'Tepat Waktu' | 'Terlambat' | 'Toleransi' {
+): 'Tepat Waktu' | 'Terlambat' {
   const config = SHIFT_CONFIGS.find((s) => s.shift === shift);
   if (!config) return 'Tepat Waktu';
 
